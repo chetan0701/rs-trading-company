@@ -1,0 +1,3281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R.S. Trading Company - Dangsaundane Upbazar (APMC Bill Management)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            onion: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+              950: '#431407'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.min.js"></script>
+  <!-- jsPDF & jsPDF AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- html2canvas for authentic Marathi Devanagari script export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- SheetJS (xlsx) for real Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts: Inter, Noto Sans Devanagari, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* Robust Base Styles to Prevent Raw/Default HTML Look */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-marathi {
+      font-family: 'Noto Sans Devanagari', 'Inter', sans-serif;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Guard against SVG sizing blowout */
+    svg {
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .btn-icon {
+      width: 1rem !important;
+      height: 1rem !important;
+      max-width: 1rem !important;
+      max-height: 1rem !important;
+    }
+
+    /* Modal Styling Guarantees */
+    .app-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background-color: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .app-modal.active {
+      display: flex !important;
+    }
+
+    /* Print styles: strictly print only the active bill document */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      body * {
+        visibility: hidden !important;
+      }
+      #printable-bill-wrapper, #printable-bill-wrapper * {
+        visibility: visible !important;
+      }
+      #printable-bill-wrapper {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #printable-bill-area {
+        border: 1.5px solid #000000 !important;
+        box-shadow: none !important;
+        padding: 8mm 10mm !important;
+        page-break-inside: auto !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .avoid-break {
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen Flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-orange-200">
+
+  <!-- ========================================================================= -->
+  <!-- 1. NAVIGATION BAR -->
+  <!-- ========================================================================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        
+        <!-- Logo & Title -->
+        <div onclick="navigateTo('dashboard')" class="flex items-center gap-3 cursor-pointer group select-none">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-orange-800 flex items-center justify-center text-white shadow-md shadow-orange-950/20 group-hover:scale-105 transition-transform">
+            <!-- Onion SVG Icon with strict sizing -->
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v3" />
+              <path d="M12 19c4.5 0 8-3.5 8-8 0-4-3.5-7-8-10-4.5 3-8 6-8 10 0 4.5 3.5 8 8 8z" />
+              <path d="M9 13.5c1 1.5 2 2 3 2s2-.5 3-2" />
+              <path d="M10 22h4" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight leading-tight">
+                R.S. Trading Company
+              </span>
+              <span class="text-xs font-bold text-orange-800 font-marathi">
+                (आर. एस. ट्रेडिंग कंपनी)
+              </span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <span class="text-orange-900 font-semibold font-marathi">डांगसौंदाणे उपबाजार (नाशिक)</span>
+              <span>•</span>
+              <span class="font-mono-num text-slate-600 font-bold">मोबा: 9890355007</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Navigation Tabs -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <button id="nav-dashboard" onclick="navigateTo('dashboard')" class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-orange-100 text-orange-950">
+            <span>Dashboard</span> <span class="text-xs text-slate-500 font-marathi">/ डॅशबोर्ड</span>
+          </button>
+          <button id="nav-bills" onclick="navigateTo('bills')" class="px-3.5 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+            <span>All Bills</span> <span class="text-xs text-slate-500 font-marathi">/ सर्व बिले</span>
+          </button>
+          <button id="nav-create" onclick="navigateTo('create')" class="ml-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-orange-700 hover:bg-orange-800 shadow-sm transition-all flex items-center gap-1.5">
+            <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Create Bill</span>
+            <span class="text-xs text-orange-200 font-marathi">/ नवीन बिल</span>
+          </button>
+        </nav>
+
+        <!-- Right Quick Actions -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Excel Export -->
+          <button onclick="handleExcelExport()" title="Export all business data to Excel (.xlsx)" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold transition-colors shadow-xs">
+            <svg class="btn-icon text-emerald-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export Excel</span>
+          </button>
+
+          <!-- Supabase / Database Status Button -->
+          <button onclick="openSupabaseModal()" id="db-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border border-orange-200 bg-orange-50 text-orange-900 hover:bg-orange-100 transition-colors shadow-xs" title="Database Configuration">
+            <span id="db-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+            <span id="db-status-text">Database</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Bar -->
+      <div class="flex md:hidden border-t border-slate-100 py-2 justify-around bg-white">
+        <button onclick="navigateTo('dashboard')" id="mobile-nav-dashboard" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-orange-100 text-orange-950">
+          डॅशबोर्ड
+        </button>
+        <button onclick="navigateTo('create')" id="mobile-nav-create" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-orange-700 text-white shadow-xs">
+          + नवीन बिल
+        </button>
+        <button onclick="navigateTo('bills')" id="mobile-nav-bills" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700">
+          सर्व बिले
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN CONTAINER (PAGE SWITCHER) -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Toast Notification Banner -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: DASHBOARD -->
+    <!-- ===================================================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      
+      <!-- Welcome Header & Quick Action -->
+      <div class="bg-gradient-to-r from-orange-900 via-orange-800 to-amber-900 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-orange-200">
+                R.S. Trading Company • डांगसौंदाणे उपबाजार, नाशिक
+              </span>
+              <span class="text-xs text-orange-300">•</span>
+              <span id="dash-date-badge" class="text-xs text-orange-200"></span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              कांदा खरेदी व हिशोब डॅशबोर्ड (Onion Bill Summary)
+            </h1>
+            <p class="text-xs sm:text-sm text-orange-100/90 mt-1 max-w-2xl font-marathi">
+              शेतकरी कांदा आवक, हमाली खर्च (@ ₹१०.५८/क्विंटल) व हप्ता पेमेंट जमा नोंदीसह सुलभ व्यवस्थापन.
+            </p>
+          </div>
+          <div>
+            <button onclick="navigateTo('create')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-orange-950 hover:bg-orange-50 font-bold text-sm shadow-md transition-all active:scale-95">
+              <svg class="btn-icon text-orange-800" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>+ नवीन बिल तयार करा</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+        
+        <!-- Total Bills -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-bold uppercase tracking-wide">Total Bills</span>
+            <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+          </div>
+          <div id="card-total-bills" class="text-2xl font-bold text-slate-900 font-mono-num">0</div>
+          <span class="text-xs text-slate-500 font-marathi mt-1 block">एकूण नोंदी झालेली बिले</span>
+        </div>
+
+        <!-- Today's Bills -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-orange-200 shadow-xs bg-orange-50/30">
+          <div class="flex items-center justify-between text-orange-800 mb-1">
+            <span class="text-xs font-bold uppercase tracking-wide">Today's Bills</span>
+            <div class="w-7 h-7 rounded-lg bg-orange-100 text-orange-800 flex items-center justify-center">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+          <div id="card-today-bills" class="text-2xl font-bold text-orange-950 font-mono-num">0</div>
+          <span class="text-xs text-orange-800 font-marathi mt-1 block">आजची कांदा बिले</span>
+        </div>
+
+        <!-- Total Payable Amount -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-bold uppercase tracking-wide">To Be Paid</span>
+            <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xs font-bold">
+              ₹
+            </div>
+          </div>
+          <div id="card-total-amount" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono-num truncate">—</div>
+          <span class="text-xs text-slate-500 font-marathi mt-1 block">एकूण निव्वळ देय रक्कम</span>
+        </div>
+
+        <!-- Total Paid -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-emerald-200 shadow-xs">
+          <div class="flex items-center justify-between text-emerald-700 mb-1">
+            <span class="text-xs font-bold uppercase tracking-wide">Total Paid</span>
+            <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <div id="card-total-paid" class="text-xl sm:text-2xl font-bold text-emerald-800 font-mono-num truncate">—</div>
+          <span class="text-xs text-emerald-600 font-marathi mt-1 block">शेतकऱ्यांना अदा रक्कम</span>
+        </div>
+
+        <!-- Total Pending -->
+        <div class="bg-white p-4 sm:p-5 rounded-xl border border-red-200 shadow-xs col-span-2 sm:col-span-1">
+          <div class="flex items-center justify-between text-red-700 mb-1">
+            <span class="text-xs font-bold uppercase tracking-wide">Total Pending</span>
+            <div class="w-7 h-7 rounded-lg bg-red-50 text-red-700 flex items-center justify-center">
+              <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div id="card-total-pending" class="text-xl sm:text-2xl font-bold text-red-700 font-mono-num truncate">—</div>
+          <span class="text-xs text-red-600 font-marathi mt-1 block">शेतकऱ्यांना बाकी देणे</span>
+        </div>
+
+      </div>
+
+      <!-- Latest Bills Section -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-slate-900">
+              Latest Bills <span class="text-xs font-medium text-slate-500 font-marathi">(अलीकडील खरेदी बिले)</span>
+            </h2>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium" id="dash-recent-count">0 bills</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="navigateTo('bills')" class="text-xs font-semibold text-orange-700 hover:text-orange-900 flex items-center gap-1 transition-colors">
+              <span>View All Bills / सर्व बिले पाहा</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Latest Bills Table Container -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 text-xs font-semibold tracking-wider">
+                <th class="py-3 px-4">Bill No / बिल क्र.</th>
+                <th class="py-3 px-4">Date / तारीख</th>
+                <th class="py-3 px-4">Farmer / शेतकरी नाव</th>
+                <th class="py-3 px-4 text-right">To Be Paid / देय</th>
+                <th class="py-3 px-4 text-right">Paid / अदा</th>
+                <th class="py-3 px-4 text-right">Pending / बाकी</th>
+                <th class="py-3 px-4 text-center">Status / स्थिती</th>
+                <th class="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="dash-latest-bills-body" class="divide-y divide-slate-100">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state in dashboard -->
+        <div id="dash-empty-state" class="hidden p-8 text-center">
+          <h3 class="text-sm font-bold text-slate-800">कोणतेही बिल आढळले नाही (No bills recorded yet)</h3>
+          <p class="text-xs text-slate-500 mt-1 font-marathi">नवीन कांदा खरेदी बिल तयार करण्यासाठी खालील बटण दाबा.</p>
+          <button onclick="navigateTo('create')" class="mt-3 px-4 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 shadow-xs">
+            <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>+ Create Bill / नवीन बिल</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 2: CREATE / EDIT BILL FORM -->
+    <!-- ===================================================================== -->
+    <section id="view-create" class="hidden space-y-6">
+      
+      <!-- Form Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="form-heading" class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Create New Bill (नवीन कांदा खरेदी बिल)
+            </h1>
+            <span id="form-mode-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-950 border border-orange-200">
+              New Entry
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5 font-marathi">
+            R.S. Trading Company, डांगसौंदाणे उपबाजार - हमाली खर्च (@ ₹१०.५८/क्विंटल) व इतर कपात वजा करून आपोआप हिशोब.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="handleCancelForm()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors">
+            Cancel / रद्द करा
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Error Alert Banner (if any) -->
+      <div id="form-error-banner" class="hidden p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3">
+        <svg class="btn-icon text-red-600 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div id="form-error-text" class="flex-1 font-medium font-marathi"></div>
+      </div>
+
+      <!-- Main Form Grid -->
+      <form id="bill-form" onsubmit="handleSaveBill(event)" class="space-y-6">
+        <input type="hidden" id="field-edit-id" value="">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- Left 2 Cols: Form Fields -->
+          <div class="lg:col-span-2 space-y-6">
+            
+            <!-- SECTION 1: BILL & FARMER IDENTIFICATION -->
+            <div class="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-950 flex items-center justify-center text-xs font-bold">1</span>
+                  Farmer & Bill Identification (शेतकरी व बिल माहिती)
+                </h3>
+                <span class="text-xs text-slate-400">* Required / आवश्यक</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Bill Number -->
+                <div>
+                  <label for="field-bill-number" class="block text-xs font-bold text-slate-700 mb-1">
+                    Bill Number / बिल क्र. <span class="text-orange-700 font-normal">(Auto-generated)</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="field-bill-number" 
+                    readonly 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-800 font-mono-num font-bold text-sm cursor-not-allowed focus:outline-none"
+                  >
+                </div>
+
+                <!-- Date -->
+                <div>
+                  <label for="field-date" class="block text-xs font-bold text-slate-700 mb-1">
+                    Date / दिनांक (तारीख) <span class="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="date" 
+                    id="field-date" 
+                    required 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-medium"
+                  >
+                </div>
+
+                <!-- Farmer / Person Name -->
+                <div class="sm:col-span-2">
+                  <label for="field-person-name" class="block text-xs font-bold text-slate-700 mb-1">
+                    Person / Farmer Name (शेतकऱ्याचे पूर्ण नाव) <span class="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="field-person-name" 
+                    required 
+                    placeholder="उदा. नामदेव सावंत / रमेश पाटील" 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-medium font-marathi"
+                  >
+                </div>
+
+                <!-- Mobile Number -->
+                <div>
+                  <label for="field-mobile-number" class="block text-xs font-bold text-slate-700 mb-1">
+                    Mobile Number / मोबाईल क्र. <span class="text-slate-400 font-normal">(10 अंक)</span>
+                  </label>
+                  <input 
+                    type="tel" 
+                    id="field-mobile-number" 
+                    pattern="[0-9]{10}"
+                    maxlength="10" 
+                    placeholder="उदा. 9890355007" 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num focus:ring-2 focus:ring-orange-500"
+                  >
+                </div>
+
+                <!-- Village / Place -->
+                <div>
+                  <label for="field-village-place" class="block text-xs font-bold text-slate-700 mb-1">
+                    Village / Place (गाव / पत्ता)
+                  </label>
+                  <input 
+                    type="text" 
+                    id="field-village-place" 
+                    placeholder="उदा. डांगसौंदाणे / सटाणा / नामपूर" 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-marathi"
+                  >
+                </div>
+
+                <!-- Market / Yard -->
+                <div class="sm:col-span-2">
+                  <label for="field-market-yard" class="block text-xs font-bold text-slate-700 mb-1">
+                    Market / Yard (मार्केट / उपबाजार)
+                  </label>
+                  <input 
+                    type="text" 
+                    id="field-market-yard" 
+                    value="डांगसौंदाणे उपबाजार (Dangsaundane Upbazar)" 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-marathi"
+                  >
+                </div>
+
+              </div>
+            </div>
+
+            <!-- SECTION 2: ONION COMMODITY & WEIGHMENT -->
+            <div class="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-950 flex items-center justify-center text-xs font-bold">2</span>
+                  Onion Details & Weighment (कांदा वजन व भाव दर)
+                </h3>
+                <span class="text-xs text-orange-800 font-semibold font-marathi">मूल रक्कम आपोआप निघते</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                <!-- Onion Variety -->
+                <div class="sm:col-span-3">
+                  <label for="field-onion-variety" class="block text-xs font-bold text-slate-700 mb-1">
+                    Onion Variety (कांद्याची जात)
+                  </label>
+                  <select 
+                    id="field-onion-variety" 
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-medium font-marathi"
+                  >
+                    <option value="लाल कांदा (Red Onion)" selected>लाल कांदा (Red Onion)</option>
+                    <option value="पांढरा कांदा (White Onion)">पांढरा कांदा (White Onion)</option>
+                    <option value="गावरान / उन्हाळी कांदा (Garva)">गावरान / उन्हाळी कांदा (Garva)</option>
+                    <option value="पोळ कांदा (Pol Onion)">पोळ कांदा (Pol Onion)</option>
+                    <option value="इतर जात (Other Variety)">इतर जात (Other Variety)</option>
+                  </select>
+                </div>
+
+                <!-- Quantity -->
+                <div>
+                  <label for="field-quantity" class="block text-xs font-bold text-slate-700 mb-1">
+                    Quantity / वजन <span class="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    id="field-quantity" 
+                    required 
+                    min="0.01" 
+                    step="any" 
+                    placeholder="उदा. 100" 
+                    oninput="recalculateFormValues(false)"
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                  >
+                </div>
+
+                <!-- Unit -->
+                <div>
+                  <label for="field-unit" class="block text-xs font-bold text-slate-700 mb-1">
+                    Unit / एकक <span class="text-red-500">*</span>
+                  </label>
+                  <select 
+                    id="field-unit" 
+                    required 
+                    onchange="recalculateFormValues(false)"
+                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-medium focus:ring-2 focus:ring-orange-500 font-marathi"
+                  >
+                    <option value="Quintal" selected>Quintal / क्विंटल (100 KG)</option>
+                    <option value="KG">KG / किलो</option>
+                    <option value="Ton">Ton / टन</option>
+                  </select>
+                </div>
+
+                <!-- Rate -->
+                <div>
+                  <label for="field-rate" class="block text-xs font-bold text-slate-700 mb-1">
+                    Rate / भाव दर <span id="rate-unit-label" class="text-orange-800 font-semibold">(₹ / Quintal)</span> <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      id="field-rate" 
+                      required 
+                      min="0" 
+                      step="any" 
+                      placeholder="उदा. 2500" 
+                      oninput="recalculateFormValues(false)"
+                      class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                    >
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Calculated Gross Onion Total Bar -->
+              <div class="bg-orange-50 border border-orange-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-2">
+                <div>
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                    Gross Onion Amount / कांद्याची एकूण मूल रक्कम
+                  </span>
+                  <span class="text-xs text-slate-500 font-marathi" id="calc-formula-display">0 क्विंटल × ₹0 = ₹0</span>
+                </div>
+                <div class="text-right">
+                  <span id="display-gross-amount" class="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono-num">—</span>
+                  <input type="hidden" id="field-gross-amount" value="0">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- SECTION 3: DEDUCTIONS (HAMALI & OTHER CHARGES) -->
+            <div class="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-950 flex items-center justify-center text-xs font-bold">3</span>
+                  Deductions & APMC Charges (कपात व हमाली खर्च)
+                </h3>
+                <span class="text-xs text-red-600 font-semibold font-marathi">एकूण रकमेतून वजा होणार</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Hamali Charges (Auto: 10.58 per Quintal) -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label for="field-hamali-charges" class="text-xs font-bold text-slate-700">
+                      Hamali Charges (हमाली खर्च)
+                    </label>
+                    <span class="text-[10px] bg-orange-100 text-orange-900 px-1.5 py-0.5 rounded font-bold font-marathi">
+                      ₹१०.५८ / क्विंटल
+                    </span>
+                  </div>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      id="field-hamali-charges" 
+                      min="0" 
+                      step="any" 
+                      value="0" 
+                      oninput="recalculateFormValues(true)"
+                      class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                    >
+                  </div>
+                  <span class="text-[11px] text-slate-500 mt-0.5 block font-marathi" id="hamali-calc-label">
+                    उपबाजार प्रमाण दर: ₹१०.५८ प्रति क्विंटल
+                  </span>
+                </div>
+
+                <!-- Transport / Other Charges -->
+                <div>
+                  <label for="field-other-charges" class="block text-xs font-bold text-slate-700 mb-1">
+                    Transport / Other Charges (इतर / तोलाई खर्च)
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      id="field-other-charges" 
+                      min="0" 
+                      step="any" 
+                      value="0" 
+                      oninput="recalculateFormValues(true)"
+                      class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                    >
+                  </div>
+                  <span class="text-[11px] text-slate-400 mt-0.5 block font-marathi">
+                    तोलाई, वाहतूक किंवा इतर वजावट
+                  </span>
+                </div>
+
+              </div>
+
+              <!-- Prominent Net Amount to be Paid Banner -->
+              <div class="bg-gradient-to-r from-orange-500/10 via-amber-500/15 to-emerald-500/10 border-2 border-orange-600 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3 shadow-xs">
+                <div>
+                  <span class="text-xs font-black uppercase tracking-wider text-orange-950 block font-marathi">
+                    Total Amount to be Paid (शेतकऱ्यास निव्वळ देय रक्कम)
+                  </span>
+                  <span class="text-xs text-slate-600 font-medium font-marathi" id="calc-net-formula-display">
+                    मूल रक्कम - एकूण कपात (हमाली + इतर खर्च)
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span id="display-total-amount-to-pay" class="text-2xl sm:text-3xl font-black text-orange-950 font-mono-num">—</span>
+                  <input type="hidden" id="field-total-amount" value="0">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- SECTION 4: PAYMENT SETTLEMENT & NOTES -->
+            <div class="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-orange-100 text-orange-950 flex items-center justify-center text-xs font-bold">4</span>
+                  Payment & Settlement (शेतकरी देयक व हिशोब)
+                </h3>
+                <span class="text-xs text-slate-400 font-marathi">उचली, रोख व बाकी रक्कम</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- Advance Amount -->
+                <div>
+                  <label for="field-advance-amount" class="block text-xs font-bold text-slate-700 mb-1">
+                    Advance Amount / उचली रक्कम (अ‍ॅडव्हान्स)
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      id="field-advance-amount" 
+                      min="0" 
+                      step="any" 
+                      value="0" 
+                      oninput="recalculateFormValues(true)"
+                      class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                    >
+                  </div>
+                  <span class="text-[11px] text-slate-400 mt-0.5 block font-marathi">पूर्वी दिलेली उचली रक्कम</span>
+                </div>
+
+                <!-- Paid Amount -->
+                <div>
+                  <label for="field-paid-amount" class="block text-xs font-bold text-slate-700 mb-1">
+                    Paid Amount / अदा रक्कम (रोख / RTGS)
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+                    <input 
+                      type="number" 
+                      id="field-paid-amount" 
+                      min="0" 
+                      step="any" 
+                      value="0" 
+                      oninput="recalculateFormValues(true)"
+                      class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono-num font-semibold focus:ring-2 focus:ring-orange-500"
+                    >
+                  </div>
+                  <span class="text-[11px] text-slate-400 mt-0.5 block font-marathi">जागेवर किंवा बँक खात्यावर दिलेली रक्कम</span>
+                </div>
+
+              </div>
+
+              <!-- Notes (Optional) -->
+              <div class="pt-2">
+                <label for="field-notes" class="block text-xs font-bold text-slate-700 mb-1">
+                  Notes / Remarks (शेरा / टीप) <span class="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <textarea 
+                  id="field-notes" 
+                  rows="2" 
+                  placeholder="उदा. RTGS द्वारे पेमेंट जमा, प्रतवारीनुसार भाव..." 
+                  class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 font-marathi"
+                ></textarea>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Right 1 Col: Live Financial Summary & Save Button -->
+          <div class="space-y-6">
+            
+            <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 space-y-4 sticky top-24">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 flex items-center justify-between">
+                <span>Bill Financial Summary</span>
+                <span id="display-payment-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 font-marathi">
+                  बाकी (Pending)
+                </span>
+                <input type="hidden" id="field-payment-status" value="Pending">
+              </h3>
+
+              <!-- Breakdown metrics -->
+              <div class="space-y-2.5 text-sm">
+                
+                <div class="flex justify-between items-center text-slate-600">
+                  <span>Gross Onion / मूल रक्कम:</span>
+                  <span id="summary-preview-gross" class="font-semibold text-slate-800 font-mono-num">—</span>
+                </div>
+
+                <div class="flex justify-between items-center text-slate-500 text-xs">
+                  <span>Less: Hamali (@ ₹10.58/Q):</span>
+                  <span id="summary-preview-hamali" class="font-medium text-red-700 font-mono-num">—</span>
+                </div>
+
+                <div class="flex justify-between items-center text-slate-500 text-xs">
+                  <span>Less: Other Charges / इतर खर्च:</span>
+                  <span id="summary-preview-other" class="font-medium text-red-700 font-mono-num">—</span>
+                </div>
+
+                <div class="py-2.5 px-3 bg-orange-50 rounded-lg border border-orange-200 flex justify-between items-center text-slate-800">
+                  <span class="font-bold text-xs uppercase text-orange-950 font-marathi">शेतकऱ्यास देय (To be Paid):</span>
+                  <span id="summary-preview-total-to-pay" class="font-black text-lg text-orange-950 font-mono-num">—</span>
+                </div>
+
+                <div class="flex justify-between items-center text-slate-600 text-xs pt-1">
+                  <span>Advance / उचली:</span>
+                  <span id="summary-preview-advance" class="font-semibold text-slate-700 font-mono-num">—</span>
+                </div>
+
+                <div class="flex justify-between items-center text-slate-600 text-xs">
+                  <span>Paid / अदा रक्कम:</span>
+                  <span id="summary-preview-paid" class="font-semibold text-slate-700 font-mono-num">—</span>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
+                  <div>
+                    <span class="block text-xs uppercase font-bold text-slate-700 font-marathi">बाकी रक्कम (Pending Dues)</span>
+                    <span class="text-[10px] text-slate-400">देय - (उचली + अदा)</span>
+                  </div>
+                  <div class="text-right">
+                    <span id="display-pending-amount" class="text-2xl font-black text-red-700 font-mono-num">—</span>
+                    <input type="hidden" id="field-pending-amount" value="0">
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Overpayment warning -->
+              <div id="payment-exceed-warning" class="hidden p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs font-marathi">
+                ⚠️ उचली + अदा रक्कम एकूण देय रकमेपेक्षा जास्त आहे.
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="pt-3 border-t border-slate-100 space-y-2">
+                <button 
+                  type="submit" 
+                  id="btn-save-bill"
+                  class="w-full py-3 px-4 rounded-xl bg-orange-700 hover:bg-orange-800 active:bg-orange-900 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span id="btn-save-text">Save Bill / बिल सेव्ह करा</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  onclick="handleCancelForm()"
+                  class="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors"
+                >
+                  Cancel / मागे जा
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </form>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 3: ALL BILLS LIST -->
+    <!-- ===================================================================== -->
+    <section id="view-bills" class="hidden space-y-6">
+      
+      <!-- Page Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">
+              All Onion Bills <span class="text-lg font-bold text-slate-600 font-marathi">(सर्व कांदा खरेदी बिले)</span>
+            </h1>
+            <span id="bills-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-800">
+              0
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5 font-marathi">
+            R.S. Trading Company, डांगसौंदाणे उपबाजार - सर्व बिले शोधा, हप्ता जमा करा, प्रिंट करा किंवा PDF डाऊनलोड करा.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button onclick="handleExcelExport()" class="px-3.5 py-2 rounded-lg border border-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs">
+            <svg class="btn-icon text-emerald-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export Excel</span>
+          </button>
+          <button onclick="navigateTo('create')" class="px-4 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+            <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>+ नवीन बिल</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filters Toolbar -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          
+          <!-- Search Input -->
+          <div class="sm:col-span-6 relative">
+            <span class="absolute left-3.5 top-2.5 text-slate-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input 
+              type="text" 
+              id="search-bills-input" 
+              placeholder="Search by Bill No, Name, Mobile, Village... / नाव, मोबाईल, गाव..." 
+              oninput="handleSearchFilterChange()"
+              class="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-orange-500 font-marathi"
+            >
+            <button id="search-clear-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Date Filter -->
+          <div class="sm:col-span-3">
+            <select 
+              id="filter-date-select" 
+              onchange="handleSearchFilterChange()" 
+              class="w-full py-2 px-3 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-orange-500 font-medium font-marathi"
+            >
+              <option value="all">All Dates / सर्व तारखा</option>
+              <option value="today">Today / आजची बिले</option>
+              <option value="this_month">This Month / चालू महिना</option>
+              <option value="custom">Custom Date / तारीख निवडा</option>
+            </select>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="sm:col-span-3">
+            <select 
+              id="filter-status-select" 
+              onchange="handleSearchFilterChange()" 
+              class="w-full py-2 px-3 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-orange-500 font-medium font-marathi"
+            >
+              <option value="all">All Status / सर्व स्थिती</option>
+              <option value="Paid">Paid / पूर्ण अदा</option>
+              <option value="Partially Paid">Partially Paid / अर्धवट बाकी</option>
+              <option value="Pending">Pending / पूर्ण बाकी</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Custom Date Picker Row -->
+        <div id="custom-date-container" class="hidden pt-2 border-t border-slate-100 flex items-center gap-3 font-marathi">
+          <span class="text-xs font-semibold text-slate-600">तारीख निवडा (Select Date):</span>
+          <input 
+            type="date" 
+            id="filter-custom-date" 
+            onchange="handleSearchFilterChange()"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-800"
+          >
+        </div>
+      </div>
+
+      <!-- Bills Table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50/90 border-b border-slate-200 text-slate-600 text-xs font-semibold tracking-wider">
+                <th class="py-3 px-3 sm:px-4">Bill No / बिल क्र.</th>
+                <th class="py-3 px-3 sm:px-4">Date / तारीख</th>
+                <th class="py-3 px-3 sm:px-4">Farmer / शेतकरी नाव</th>
+                <th class="py-3 px-3 sm:px-4">Place / गाव</th>
+                <th class="py-3 px-3 sm:px-4 text-right">Quantity / वजन</th>
+                <th class="py-3 px-3 sm:px-4 text-right">Rate / भाव</th>
+                <th class="py-3 px-4 text-right">To Be Paid / देय</th>
+                <th class="py-3 px-4 text-right">Paid / अदा</th>
+                <th class="py-3 px-4 text-right">Pending / बाकी</th>
+                <th class="py-3 px-4 text-center">Status / स्थिती</th>
+                <th class="py-3 px-4 text-center">Actions / कृती</th>
+              </tr>
+            </thead>
+            <tbody id="bills-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="bills-empty-state" class="hidden p-8 text-center font-marathi">
+          <h3 id="bills-empty-title" class="text-sm font-bold text-slate-800">No bills found</h3>
+          <p id="bills-empty-subtitle" class="text-xs text-slate-500 mt-1">कृपया शोध शब्द तपासा किंवा नवीन बिल तयार करा.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 4: BILL DETAILS (PRINTABLE & DUAL DOWNLOADABLE PDF) -->
+    <!-- ===================================================================== -->
+    <section id="view-details" class="hidden space-y-6">
+      
+      <!-- Top Action Bar (Clean, normal buttons without oversized icons) -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 no-print">
+        <div class="flex items-center gap-3">
+          <button onclick="navigateTo('bills')" class="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-600 transition-colors" title="Back to Bills">
+            <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Bill Document View
+              </h1>
+              <span class="text-sm font-bold text-orange-800 font-marathi">(कांदा खरेदी पावती)</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono-num font-bold" id="details-top-bill-number">—</span>
+          </div>
+        </div>
+
+        <!-- Controls: Language preview toggle, Update Payment, Edit, Print, Dual PDF -->
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- Language view toggle -->
+          <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100">
+            <button 
+              id="btn-lang-marathi" 
+              onclick="setBillDocumentLanguage('marathi')" 
+              class="px-2.5 py-1.5 rounded-md text-xs font-bold bg-white text-orange-950 shadow-xs font-marathi"
+            >
+              मराठी पावती
+            </button>
+            <button 
+              id="btn-lang-english" 
+              onclick="setBillDocumentLanguage('english')" 
+              class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900"
+            >
+              English Bill
+            </button>
+          </div>
+
+          <!-- PROPER COMPACT BUTTON: Update Payment -->
+          <button 
+            id="btn-details-add-payment" 
+            onclick="openPaymentUpdateModal(currentDetailedBill?.id)" 
+            class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-xs font-marathi"
+            title="शेतकऱ्याला पुढील हप्ता जमा करा"
+          >
+            <svg class="btn-icon text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+            </svg>
+            <span>+ Update Payment (हप्ता जमा)</span>
+          </button>
+
+          <!-- PROPER COMPACT BUTTON: Edit -->
+          <button 
+            id="btn-details-edit" 
+            class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow-xs"
+          >
+            <svg class="btn-icon text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span>Edit / संपादन</span>
+          </button>
+
+          <!-- Print Button -->
+          <button onclick="window.print()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow-xs">
+            <svg class="btn-icon text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Print</span>
+          </button>
+
+          <!-- OPTION 1: Download PDF (मराठी) -->
+          <button 
+            id="btn-download-pdf-marathi" 
+            onclick="downloadPDFMarathi()" 
+            class="px-3 py-1.5 rounded-lg bg-orange-700 hover:bg-orange-800 text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 font-marathi"
+            title="मराठी पावती PDF डाऊनलोड"
+          >
+            <svg class="btn-icon text-orange-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>PDF (मराठी)</span>
+          </button>
+
+          <!-- OPTION 2: Download PDF (English) -->
+          <button 
+            id="btn-download-pdf-english" 
+            onclick="downloadPDFEnglish()" 
+            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5"
+            title="Download English Bill PDF"
+          >
+            <svg class="btn-icon text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>PDF (English)</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Printable Clean Business Document Container -->
+      <div class="max-w-3xl mx-auto" id="printable-bill-wrapper">
+        <div id="printable-bill-area" class="bg-white border-2 border-slate-300 rounded-2xl p-6 sm:p-10 shadow-sm space-y-6">
+          
+          <!-- Document Header with R.S. Trading Company & Dangsaundane Upbazar -->
+          <div class="border-b-2 border-orange-700 pb-5 text-center relative avoid-break">
+            <div class="inline-block px-3 py-1 rounded-full bg-orange-100 text-orange-950 text-xs font-extrabold tracking-wider uppercase mb-2">
+              कांदा व्यापारी व कमिशन एजंट (Onion Merchant & Commission Agent)
+            </div>
+            
+            <h2 class="text-2xl sm:text-3xl font-black text-orange-950 tracking-tight">
+              R.S. TRADING COMPANY
+            </h2>
+            <h3 class="text-xl sm:text-2xl font-black text-orange-800 font-marathi tracking-tight mt-0.5">
+              आर. एस. ट्रेडिंग कंपनी
+            </h3>
+            
+            <p class="text-xs sm:text-sm text-slate-700 font-medium font-marathi mt-1.5">
+              डांगसौंदाणे उपबाजार, ता. बागलाण (सटाणा), जि. नाशिक, महाराष्ट्र - ४२३३०१
+            </p>
+            <p class="text-xs text-slate-500 font-medium">
+              Dangsaundane Upbazar, Tal. Baglan, Dist. Nashik, Maharashtra - 423301
+            </p>
+            <p class="text-xs text-orange-950 font-bold mt-1 font-mono-num">
+              📞 फोन / मोबाईल: 9890355007
+            </p>
+
+            <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-left">
+              <div>
+                <span class="text-[11px] uppercase font-extrabold text-slate-500 tracking-wider block" id="doc-title-subtitle">
+                  कांदा खरेदी पावती / ONION TRADING BILL
+                </span>
+                <span class="block text-lg font-black text-slate-900 tracking-tight" id="doc-title-main">
+                  कांदा खरेदी बिल
+                </span>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] uppercase font-extrabold text-slate-500 tracking-wider block" id="doc-meta-label">
+                  बिल क्र. व दिनांक (Bill No & Date)
+                </span>
+                <div class="flex items-center gap-3 justify-end mt-0.5">
+                  <span id="doc-bill-number" class="text-base font-extrabold text-orange-800 font-mono-num">—</span>
+                  <span class="text-slate-300">|</span>
+                  <span id="doc-date" class="text-sm font-semibold text-slate-800">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Customer / Farmer Details -->
+          <div class="avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-orange-700 mb-2.5">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-farmer-heading">
+                शेतकरी तपशील (CUSTOMER / FARMER DETAILS)
+              </h4>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 px-1 text-xs sm:text-sm">
+              <div>
+                <span class="block text-slate-500 font-medium font-marathi" id="lbl-person-name">शेतकरी नाव:</span>
+                <span id="doc-person-name" class="font-bold text-slate-900 text-base font-marathi">—</span>
+              </div>
+              <div>
+                <span class="block text-slate-500 font-medium font-marathi" id="lbl-mobile">मोबाईल क्र.:</span>
+                <span id="doc-mobile" class="font-bold text-slate-900 font-mono-num">—</span>
+              </div>
+              <div>
+                <span class="block text-slate-500 font-medium font-marathi" id="lbl-village">गाव / पत्ता:</span>
+                <span id="doc-village" class="font-bold text-slate-900 font-marathi">—</span>
+              </div>
+              <div>
+                <span class="block text-slate-500 font-medium font-marathi" id="lbl-market">मार्केट / उपबाजार:</span>
+                <span id="doc-market" class="font-bold text-slate-900 font-marathi">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Onion Particulars Table -->
+          <div class="avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-orange-700 mb-2.5">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-onion-heading">
+                कांदा तपशील व वजन (ONION DETAILS & WEIGHMENT)
+              </h4>
+            </div>
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
+                  <tr>
+                    <th class="py-2.5 px-3 font-marathi" id="th-variety">कांदा जात (Variety)</th>
+                    <th class="py-2.5 px-3 text-right font-marathi" id="th-quantity">वजन (Quantity)</th>
+                    <th class="py-2.5 px-3 font-marathi" id="th-unit">एकक (Unit)</th>
+                    <th class="py-2.5 px-3 text-right font-marathi" id="th-rate">भाव दर (Rate)</th>
+                    <th class="py-2.5 px-3 text-right font-marathi" id="th-gross">एकूण मूल रक्कम (Gross)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr>
+                    <td id="doc-variety" class="py-3 px-3 font-semibold text-slate-800 font-marathi">—</td>
+                    <td id="doc-quantity" class="py-3 px-3 text-right font-mono-num font-bold text-slate-900">—</td>
+                    <td id="doc-unit" class="py-3 px-3 font-medium text-slate-700 font-marathi">—</td>
+                    <td id="doc-rate" class="py-3 px-3 text-right font-mono-num font-medium text-slate-800">—</td>
+                    <td id="doc-gross-amount" class="py-3 px-3 text-right font-mono-num font-bold text-slate-900 text-base">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section: Deductions & APMC Charges -->
+          <div class="avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-orange-700 mb-2.5">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-deductions-heading">
+                कपात व हमाली खर्च (DEDUCTIONS & APMC CHARGES)
+              </h4>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm">
+              <div class="flex justify-between items-center text-slate-600">
+                <span class="font-marathi">
+                  <span id="lbl-hamali-text">हमाली खर्च</span>
+                  <span id="doc-hamali-rate-label" class="font-medium text-slate-500">(@ ₹१०.५८ / क्विंटल)</span>:
+                </span>
+                <span id="doc-hamali-charges" class="font-bold text-red-700 font-mono-num">—</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-600">
+                <span class="font-marathi" id="lbl-other">इतर / वाहतूक / तोलाई कपात खर्च:</span>
+                <span id="doc-other-charges" class="font-bold text-red-700 font-mono-num">—</span>
+              </div>
+              <div class="pt-2 border-t border-slate-200 flex justify-between items-center text-slate-800 font-semibold">
+                <span class="font-marathi" id="lbl-total-deductions">एकूण कपात रक्कम (Total Deductions):</span>
+                <span id="doc-total-deductions" class="font-bold text-red-800 font-mono-num">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Total Amount to be Paid & Payment Details -->
+          <div class="avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-orange-700 mb-2.5">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-payment-heading">
+                शेतकरी देयक व हिशोब (PAYMENT & SETTLEMENT DETAILS)
+              </h4>
+            </div>
+            <div class="bg-orange-50/60 border-2 border-orange-600 rounded-xl p-5 space-y-4">
+              
+              <!-- Total Amount to be Paid Banner -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-orange-200">
+                <div>
+                  <span class="text-xs uppercase font-black text-orange-950 tracking-wider block font-marathi" id="lbl-net-payable-title">
+                    TOTAL AMOUNT TO BE PAID (शेतकऱ्यास निव्वळ देय रक्कम)
+                  </span>
+                  <span class="text-[11px] text-slate-600 font-marathi" id="lbl-net-payable-sub">
+                    कांदा मूल रक्कम - (हमाली खर्च + इतर कपात)
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span id="doc-total-to-pay" class="text-2xl sm:text-3xl font-black text-orange-950 font-mono-num">—</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+                <div>
+                  <span class="block text-slate-500 font-medium font-marathi" id="lbl-advance">उचली रक्कम (Advance):</span>
+                  <span id="doc-advance" class="font-bold text-slate-900 font-mono-num text-base">—</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500 font-medium font-marathi" id="lbl-paid">एकूण अदा रक्कम (Paid):</span>
+                  <span id="doc-paid" class="font-bold text-emerald-800 font-mono-num text-base">—</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500 font-medium font-marathi" id="lbl-status">देयक स्थिती (Status):</span>
+                  <span id="doc-status-badge" class="inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-orange-100 text-orange-800 font-marathi">
+                    —
+                  </span>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-orange-200 flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-700 block font-marathi" id="lbl-pending">
+                    शेतकऱ्यास बाकी येणे / देणे रक्कम (Pending Balance Dues)
+                  </span>
+                  <span class="text-[11px] text-slate-400 font-marathi">निव्वळ देय - (उचली + एकूण अदा)</span>
+                </div>
+                <div class="text-right">
+                  <span id="doc-pending" class="text-2xl sm:text-3xl font-black text-red-700 font-mono-num">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Payment History / Installments Log -->
+          <div id="doc-payment-history-container" class="space-y-2 avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-emerald-600 flex items-center justify-between">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-installments-heading">
+                पेमेंट हप्ते इतिहास (PAYMENT INSTALLMENT HISTORY)
+              </h4>
+              <button 
+                type="button" 
+                onclick="openPaymentUpdateModal(currentDetailedBill?.id)" 
+                class="no-print text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded border border-emerald-300 font-marathi inline-flex items-center gap-1 shadow-xs"
+              >
+                <span>+ पुढील हप्ता जमा करा</span>
+              </button>
+            </div>
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
+                  <tr>
+                    <th class="py-2 px-3 font-marathi" id="th-pay-sr">क्र.</th>
+                    <th class="py-2 px-3 font-marathi" id="th-pay-date">तारीख (Date)</th>
+                    <th class="py-2 px-3 font-marathi" id="th-pay-mode">प्रकार (Mode)</th>
+                    <th class="py-2 px-3 font-marathi" id="th-pay-note">शेरा / तपशील (Note)</th>
+                    <th class="py-2 px-3 text-right font-marathi" id="th-pay-amt">जमा रक्कम (Amount)</th>
+                  </tr>
+                </thead>
+                <tbody id="doc-payment-history-body" class="divide-y divide-slate-100">
+                  <!-- Rendered via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section: Notes (Conditional) -->
+          <div id="doc-notes-container" class="avoid-break">
+            <div class="bg-slate-100 px-3 py-1.5 rounded-md border-l-4 border-orange-700 mb-2">
+              <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 font-marathi" id="sec-notes-heading">
+                टीप / शेरा (NOTES)
+              </h4>
+            </div>
+            <div class="px-1 text-xs sm:text-sm text-slate-700 italic font-marathi" id="doc-notes-text">
+              —
+            </div>
+          </div>
+
+          <!-- Signatures Footer -->
+          <div class="pt-8 border-t border-slate-200 flex items-end justify-between text-xs text-slate-500 avoid-break">
+            <div class="text-center w-44">
+              <div class="border-b border-slate-400 pb-7"></div>
+              <span class="block mt-1.5 font-bold text-slate-700 font-marathi" id="lbl-farmer-sign">
+                शेतकऱ्याची सही (Farmer Signature)
+              </span>
+            </div>
+            <div class="text-center w-56">
+              <div class="border-b border-slate-400 pb-7"></div>
+              <span class="block mt-1.5 font-bold text-slate-800 font-marathi" id="lbl-company-sign">
+                आर. एस. ट्रेडिंग कंपनी करिता
+              </span>
+              <span class="text-[10px] text-slate-400 block">(अधिकृत स्वाक्षरी / Authorized Signatory)</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- CLOUD CONNECTION / ERROR BANNER (SHOWN IF SUPABASE IS NOT CONNECTED) -->
+  <!-- ========================================================================= -->
+  <div id="cloud-error-bar" class="hidden fixed bottom-0 inset-x-0 z-50 bg-red-900/95 text-white px-4 py-3 shadow-2xl border-t border-red-700 no-print">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 text-xs sm:text-sm font-marathi">
+        <svg class="w-5 h-5 text-red-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span id="cloud-error-bar-text" class="font-semibold">
+          ⚠️ क्लाऊड डेटाबेस (Supabase) जोडलेला नाही! बिले कायमस्वरूपी सेव्ह करण्यासाठी कृपया Supabase URL व Anon Key जोडा.
+        </span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="openSupabaseModal()" class="px-3.5 py-1.5 rounded-lg bg-white text-red-950 hover:bg-red-50 font-bold text-xs shadow-xs transition-colors">
+          Configure Supabase Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: UPDATE / ADD PAYMENT INSTALLMENT (हप्ता जमा करा) -->
+  <!-- Hidden by default with app-modal class, only active when invoked -->
+  <!-- ========================================================================= -->
+  <div id="modal-update-payment" class="app-modal no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+            ₹
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 font-marathi">पेमेंट हप्ता जमा करा (Update Payment)</h3>
+            <span class="text-xs text-slate-500 font-mono-num font-bold" id="pay-modal-bill-no">—</span>
+          </div>
+        </div>
+        <button type="button" onclick="closePaymentUpdateModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Farmer & Balance Summary -->
+      <div class="bg-orange-50 border border-orange-200 rounded-xl p-3.5 space-y-2 text-xs">
+        <div class="flex justify-between items-center text-slate-700">
+          <span class="font-medium font-marathi">शेतकरी नाव (Farmer):</span>
+          <span id="pay-modal-farmer-name" class="font-bold text-slate-900 font-marathi">—</span>
+        </div>
+        <div class="flex justify-between items-center text-slate-700">
+          <span class="font-medium font-marathi">एकूण देय रक्कम (Total To Pay):</span>
+          <span id="pay-modal-total-amount" class="font-bold text-slate-900 font-mono-num">—</span>
+        </div>
+        <div class="flex justify-between items-center text-slate-700">
+          <span class="font-medium font-marathi">आतापर्यंत एकूण अदा (Already Paid):</span>
+          <span id="pay-modal-already-paid" class="font-bold text-emerald-700 font-mono-num">—</span>
+        </div>
+        <div class="pt-2 border-t border-orange-200 flex justify-between items-center text-sm">
+          <span class="font-bold text-red-700 font-marathi">सध्याची बाकी रक्कम (Pending Balance):</span>
+          <span id="pay-modal-pending-amount" class="font-black text-red-700 font-mono-num text-base">—</span>
+        </div>
+      </div>
+
+      <!-- Form Error Alert -->
+      <div id="pay-modal-error" class="hidden p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-semibold font-marathi"></div>
+
+      <!-- Payment Input Form -->
+      <form id="payment-installment-form" onsubmit="handleSavePaymentInstallment(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="pay-modal-bill-id" value="">
+
+        <!-- Installment Amount -->
+        <div>
+          <label for="pay-modal-input-amount" class="block font-bold text-slate-700 mb-1 font-marathi">
+            आता जमा करायची रक्कम (Payment Amount) <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 text-slate-400 font-medium text-sm">₹</span>
+            <input 
+              type="number" 
+              id="pay-modal-input-amount" 
+              required 
+              min="1" 
+              step="any" 
+              placeholder="उदा. 2000" 
+              class="w-full pl-7 pr-3 py-2.5 rounded-lg border border-slate-300 text-sm font-mono-num font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+          </div>
+          <span class="text-[11px] text-slate-400 mt-0.5 block font-marathi">
+            शेतकऱ्याला दिलेला दुसरा किंवा पुढील हप्ता टाका.
+          </span>
+        </div>
+
+        <!-- Payment Date -->
+        <div>
+          <label for="pay-modal-input-date" class="block font-bold text-slate-700 mb-1 font-marathi">
+            हप्ता जमा तारीख (Payment Date) <span class="text-red-500">*</span>
+          </label>
+          <input 
+            type="date" 
+            id="pay-modal-input-date" 
+            required 
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500 font-medium"
+          >
+        </div>
+
+        <!-- Payment Mode -->
+        <div>
+          <label for="pay-modal-input-mode" class="block font-bold text-slate-700 mb-1 font-marathi">
+            पेमेंट प्रकार (Payment Mode)
+          </label>
+          <select 
+            id="pay-modal-input-mode" 
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500 font-marathi font-medium"
+          >
+            <option value="रोख (Cash)" selected>रोख (Cash / Hand Cash)</option>
+            <option value="बँक ट्रान्सफर (Bank / NEFT / RTGS)">बँक ट्रान्सफर (Bank / NEFT / RTGS)</option>
+            <option value="Google Pay / PhonePe / UPI">Google Pay / PhonePe / UPI</option>
+            <option value="चेक (Cheque)">चेक (Cheque)</option>
+            <option value="इतर (Other)">इतर (Other)</option>
+          </select>
+        </div>
+
+        <!-- Note / Reference -->
+        <div>
+          <label for="pay-modal-input-note" class="block font-bold text-slate-700 mb-1 font-marathi">
+            शेरा / संदर्भ (Note / Reference No.) <span class="text-slate-400 font-normal">(पर्यायी)</span>
+          </label>
+          <input 
+            type="text" 
+            id="pay-modal-input-note" 
+            placeholder="उदा. दुसरा हप्ता रोख दिला / UPI UTR क्र." 
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 font-marathi focus:ring-2 focus:ring-emerald-500"
+          >
+        </div>
+
+        <div class="flex gap-2.5 pt-2">
+          <button 
+            type="button" 
+            onclick="closePaymentUpdateModal()" 
+            class="flex-1 py-2 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors font-marathi"
+          >
+            रद्द करा (Cancel)
+          </button>
+          <button 
+            type="submit" 
+            id="btn-save-installment" 
+            class="flex-1 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs inline-flex items-center justify-center gap-1.5 font-marathi"
+          >
+            <span>✓ हप्ता जमा करा (Save)</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: DELETE CONFIRMATION -->
+  <!-- ========================================================================= -->
+  <div id="modal-delete" class="app-modal no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </div>
+      <div class="text-center">
+        <h3 class="text-lg font-bold text-slate-900 font-marathi">तुम्हाला हे बिल नक्की हटवायचे आहे का?</h3>
+        <p class="text-xs text-slate-500 mt-1 font-marathi" id="delete-bill-warning-text">
+          Are you sure you want to delete this bill?
+        </p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeDeleteModal()" class="flex-1 py-2 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors">
+          Cancel / रद्द करा
+        </button>
+        <button id="btn-confirm-delete" onclick="executeDeleteBill()" class="flex-1 py-2 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors shadow-xs">
+          Delete / हटवा
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: DATABASE CONFIGURATION & SUPABASE SETUP -->
+  <!-- ========================================================================= -->
+  <div id="modal-supabase" class="app-modal no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+            ⚡
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Supabase Cloud Database Setup</h3>
+        </div>
+        <button onclick="closeSupabaseModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="text-xs text-slate-600 space-y-2 font-marathi bg-orange-50 p-3 rounded-xl border border-orange-200">
+        <p class="font-semibold text-orange-950">
+          महत्त्वाची सूचना (Google Sites वापरकर्त्यांसाठी):
+        </p>
+        <p>
+          तुमची सर्व बिले कायमस्वरूपी सेव्ह राहण्यासाठी आणि कोणत्याही मोबाईल/कॉम्प्युटरवर दिसण्यासाठी <strong class="text-slate-900">Supabase Cloud Database</strong> आवश्यक आहे. खाली तुमचा Supabase Project URL आणि Public Anon Key टाका, किंवा कोडमधील <code class="bg-white px-1 py-0.5 rounded border">DEFAULT_SUPABASE_URL</code> मध्ये कायमस्वरूपी पेस्ट करा.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Project URL <span class="text-red-500">*</span></label>
+          <input 
+            type="url" 
+            id="cfg-supabase-url" 
+            placeholder="https://pukxjqudglllkdopvwmq.supabase.co" 
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono-num focus:ring-2 focus:ring-orange-500"
+          >
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Publishable / Anon Key ONLY <span class="text-red-500">*</span> <span class="text-[10px] text-emerald-700 font-normal">(Never use Secret/service_role key)</span></label>
+          <input 
+            type="password" 
+            id="cfg-supabase-key" 
+            placeholder="sb_publishable_... or eyJhbGciOiJIUzI1NiIsInR5cCI6..." 
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono-num focus:ring-2 focus:ring-orange-500"
+          >
+        </div>
+
+        <div id="db-test-result" class="hidden p-2.5 rounded-lg text-xs font-medium font-marathi"></div>
+
+        <div class="flex gap-2 pt-1">
+          <button onclick="testSupabaseCredentials()" class="px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs flex-1">
+            Test Connection / तपासा
+          </button>
+          <button onclick="saveSupabaseCredentials()" class="px-3 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 text-white font-bold text-xs flex-1">
+            Save & Connect Cloud
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <!-- ========================================================================= -->
+  <script>
+    // =========================================================================
+    // ★ SUPABASE PERMANENT CLOUD CONFIGURATION (PUBLISHABLE KEY ONLY) ★
+    // SECURITY RULE: Use ONLY the Supabase Publishable / Anon public key.
+    // NEVER paste or use a Secret / service_role key in frontend code!
+    // =========================================================================
+    const SUPABASE_URL = "https://pukxjqudglllkdopvwmq.supabase.co";
+    const SUPABASE_KEY = "PASTE_MY_SUPABASE_PUBLISHABLE_KEY_HERE";
+
+    const DEFAULT_SUPABASE_URL = SUPABASE_URL;
+    const DEFAULT_SUPABASE_ANON_KEY = SUPABASE_KEY;
+
+    // Security validator: ensures only a Publishable/Anon key is used and blocks Secret keys
+    function validatePublishableKeyOnly(key) {
+      if (!key || typeof key !== 'string') {
+        return { valid: false, reason: 'Supabase Publishable/Anon Key is empty.' };
+      }
+      const trimmed = key.trim();
+      if (trimmed === '' || trimmed === 'PASTE_MY_SUPABASE_PUBLISHABLE_KEY_HERE') {
+        return { valid: false, reason: 'Please replace PASTE_MY_SUPABASE_PUBLISHABLE_KEY_HERE with your actual Supabase Publishable/Anon Key.' };
+      }
+      // Block new-format Supabase secret keys (sb_secret_...)
+      if (trimmed.startsWith('sb_secret_') || trimmed.toLowerCase().includes('service_role')) {
+        return { valid: false, reason: 'SECURITY BLOCK: Secret / service_role keys are strictly forbidden in frontend code! Use ONLY the Publishable / Anon key.' };
+      }
+      // If it is a JWT (eyJ...), decode payload to verify role !== 'service_role'
+      if (trimmed.startsWith('eyJ')) {
+        try {
+          const parts = trimmed.split('.');
+          if (parts.length === 3) {
+            const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+            const payload = JSON.parse(payloadJson);
+            if (payload && payload.role === 'service_role') {
+              return { valid: false, reason: 'SECURITY BLOCK: JWT has role="service_role" (Secret Key). Use ONLY the "anon" Publishable key!' };
+            }
+          }
+        } catch (e) {}
+      }
+      return { valid: true, reason: '' };
+    }
+
+    // -------------------------------------------------------------------------
+    // A. COMPANY CONSTANTS & UTILITIES
+    // -------------------------------------------------------------------------
+    const COMPANY_INFO = {
+      nameEnglish: "R.S. TRADING COMPANY",
+      nameMarathi: "आर. एस. ट्रेडिंग कंपनी",
+      taglineEnglish: "Wholesale Onion Merchants & Commission Agents",
+      taglineMarathi: "कांदा व्यापारी व कमिशन एजंट",
+      addressEnglish: "Dangsaundane Upbazar, Tal. Baglan, Dist. Nashik, Maharashtra - 423301",
+      addressMarathi: "डांगसौंदाणे उपबाजार, ता. बागलाण (सटाणा), जि. नाशिक, महाराष्ट्र - ४२३३०१",
+      phone: "9890355007",
+      phoneFormatted: "+91 98903 55007"
+    };
+
+    const HAMALI_RATE_PER_QUINTAL = 10.58;
+
+    // Fixed currency display: show blank or dash if undefined/empty rather than fake ₹0 everywhere
+    function formatCurrency(amount, prefix = '₹', showZero = true) {
+      if (amount === null || amount === undefined || amount === '' || isNaN(Number(amount))) {
+        return showZero ? `${prefix}0` : '—';
+      }
+      const num = Math.round(Number(amount));
+      if (num === 0 && !showZero) return '—';
+      
+      const isNegative = num < 0;
+      const absNumStr = Math.abs(num).toString();
+
+      let lastThree = absNumStr.substring(absNumStr.length - 3);
+      const otherNumbers = absNumStr.substring(0, absNumStr.length - 3);
+      if (otherNumbers !== '') {
+        lastThree = ',' + lastThree;
+      }
+      const formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+      return `${isNegative ? '-' : ''}${prefix}${formatted}`;
+    }
+
+    function formatDate(dateStr, fullMonth = true, inMarathi = false) {
+      if (!dateStr) return '—';
+      try {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const monthIdx = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          
+          if (inMarathi) {
+            const marathiMonths = [
+              'जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून',
+              'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'
+            ];
+            return `${day} ${marathiMonths[monthIdx] || ''} ${year}`;
+          }
+
+          const d = new Date(year, monthIdx, day);
+          return d.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: fullMonth ? 'long' : 'short',
+            year: 'numeric'
+          });
+        }
+        return dateStr;
+      } catch (e) {
+        return dateStr || '—';
+      }
+    }
+
+    function getTodayDateString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getQuantityInQuintals(qty, unit) {
+      const q = parseFloat(qty) || 0;
+      if (unit === 'Quintal') return q;
+      if (unit === 'KG') return q / 100;
+      if (unit === 'Ton') return q * 10;
+      return q;
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 font-marathi ${
+        type === 'success' 
+          ? 'bg-emerald-800 text-white border-emerald-900' 
+          : 'bg-red-800 text-white border-red-900'
+      }`;
+
+      const icon = type === 'success'
+        ? `<svg class="btn-icon text-emerald-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+        : `<svg class="btn-icon text-red-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`;
+
+      toast.innerHTML = `${icon}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // -------------------------------------------------------------------------
+    // B. DATABASE SERVICE (SUPABASE PRIMARY + INDEXEDDB LOCAL CACHE)
+    // -------------------------------------------------------------------------
+    const DB_NAME = 'RSTradingDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'bills';
+    const STORAGE_CFG_KEY = 'rs_trading_db_config_v2';
+
+    let dbInstance = null;
+    let supabaseClient = null;
+    let isSupabaseHealthy = false;
+    let lastSupabaseError = '';
+
+    let dbConfig = {
+      supabaseUrl: DEFAULT_SUPABASE_URL.trim(),
+      supabaseAnonKey: DEFAULT_SUPABASE_ANON_KEY.trim()
+    };
+
+    function loadPersistedDbConfig() {
+      // Always start with the project URL
+      dbConfig.supabaseUrl = DEFAULT_SUPABASE_URL.trim();
+
+      const hardcodedCheck = validatePublishableKeyOnly(DEFAULT_SUPABASE_ANON_KEY);
+      if (hardcodedCheck.valid) {
+        dbConfig.supabaseAnonKey = DEFAULT_SUPABASE_ANON_KEY.trim();
+      }
+
+      // 1. Check localStorage for the saved Publishable Key / URL.
+      // Keep one canonical config key, while accepting the older key for migration.
+      try {
+        const saved = localStorage.getItem(STORAGE_CFG_KEY) || localStorage.getItem('rs_trading_db_config');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const savedUrl = typeof parsed?.supabaseUrl === 'string' ? parsed.supabaseUrl.trim() : '';
+          const savedKey = typeof parsed?.supabaseAnonKey === 'string' ? parsed.supabaseAnonKey.trim() : '';
+
+          if (savedUrl) dbConfig.supabaseUrl = savedUrl;
+          if (savedKey) {
+            const check = validatePublishableKeyOnly(savedKey);
+            if (check.valid) {
+              dbConfig.supabaseAnonKey = savedKey;
+              // Migrate old saved config to the current key.
+              localStorage.setItem(STORAGE_CFG_KEY, JSON.stringify({
+                supabaseUrl: dbConfig.supabaseUrl,
+                supabaseAnonKey: dbConfig.supabaseAnonKey
+              }));
+            } else {
+              console.warn('[Supabase Config] Ignored invalid/secret key in localStorage:', check.reason);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Supabase Config] Could not read saved configuration.');
+      }
+
+      // 2. Check URL query parameters (?sb_url=...&sb_key=...) for Google Sites embed convenience
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const qUrl = params.get('sb_url');
+        const qKey = params.get('sb_key');
+        if (qUrl) dbConfig.supabaseUrl = qUrl.trim();
+        if (qKey) {
+          const check = validatePublishableKeyOnly(qKey);
+          if (check.valid) {
+            dbConfig.supabaseAnonKey = qKey.trim();
+          } else {
+            console.error('[Supabase Security]', check.reason);
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function initDatabase() {
+      loadPersistedDbConfig();
+      initSupabase();
+
+      return new Promise((resolve) => {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
+        }
+        try {
+          const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+              store.createIndex('bill_number', 'bill_number', { unique: true });
+              store.createIndex('date', 'date', { unique: false });
+            }
+          };
+          request.onsuccess = (e) => {
+            dbInstance = e.target.result;
+            resolve(dbInstance);
+          };
+          request.onerror = () => resolve(null);
+        } catch (err) {
+          resolve(null);
+        }
+      });
+    }
+
+    function initSupabase() {
+      const url = (dbConfig.supabaseUrl || SUPABASE_URL || '').trim();
+      const key = (dbConfig.supabaseAnonKey || '').trim();
+      const keyValidation = validatePublishableKeyOnly(key);
+
+      if (!url) {
+        supabaseClient = null;
+        isSupabaseHealthy = false;
+        lastSupabaseError = 'Supabase Project URL is missing.';
+        console.warn('[Supabase Init]', lastSupabaseError);
+        updateDbStatusUI();
+        return;
+      }
+
+      if (!keyValidation.valid) {
+        supabaseClient = null;
+        isSupabaseHealthy = false;
+        lastSupabaseError = keyValidation.reason;
+        console.warn('[Supabase Init]', lastSupabaseError);
+        updateDbStatusUI();
+        return;
+      }
+
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        supabaseClient = null;
+        isSupabaseHealthy = false;
+        lastSupabaseError = 'Supabase JS client library failed to load from CDN.';
+        console.error('[Supabase Init]', lastSupabaseError);
+        updateDbStatusUI();
+        return;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(url, key, {
+          auth: { persistSession: false }
+        });
+        console.log('[Supabase Init] Connected client for:', url);
+      } catch (e) {
+        console.error('[Supabase Init] Client creation error:', e);
+        supabaseClient = null;
+        isSupabaseHealthy = false;
+        lastSupabaseError = e.message || 'Invalid Supabase configuration';
+      }
+      updateDbStatusUI();
+    }
+
+    function updateDbStatusUI(customErrorMsg = '') {
+      const badge = document.getElementById('db-status-badge');
+      const dot = document.getElementById('db-indicator-dot');
+      const text = document.getElementById('db-status-text');
+      const errorBar = document.getElementById('cloud-error-bar');
+      const errorBarText = document.getElementById('cloud-error-bar-text');
+
+      if (!badge || !dot || !text) return;
+
+      if (supabaseClient && isSupabaseHealthy) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+        text.innerText = 'Cloud Connected (Supabase)';
+        badge.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 transition-colors shadow-xs';
+        if (errorBar) errorBar.classList.add('hidden');
+      } else if (supabaseClient && !isSupabaseHealthy && lastSupabaseError) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-red-600 animate-ping';
+        text.innerText = 'Cloud DB Error';
+        badge.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-red-300 bg-red-50 text-red-900 hover:bg-red-100 transition-colors shadow-xs';
+        if (errorBar) {
+          errorBar.classList.remove('hidden');
+          if (errorBarText) {
+            errorBarText.innerText = `⚠️ क्लाऊड डेटाबेस त्रुटी (Database Error): ${customErrorMsg || lastSupabaseError}`;
+          }
+        }
+      } else {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+        text.innerText = 'Setup Cloud DB (Required)';
+        badge.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-red-300 bg-red-50 text-red-800 hover:bg-red-100 transition-colors shadow-xs';
+        if (errorBar) {
+          errorBar.classList.remove('hidden');
+          if (errorBarText) {
+            errorBarText.innerText = '⚠️ क्लाऊड डेटाबेस (Supabase) जोडलेला नाही! बिले कायमस्वरूपी सेव्ह करण्यासाठी कृपया Supabase URL व Anon Key जोडा.';
+          }
+        }
+      }
+    }
+
+    // Format row from Supabase so numeric and JSON fields are always clean
+    function normalizeBillRecord(raw) {
+      if (!raw) return null;
+      let history = [];
+      if (Array.isArray(raw.payment_history)) {
+        history = raw.payment_history;
+      } else if (typeof raw.payment_history === 'string') {
+        try { history = JSON.parse(raw.payment_history); } catch (e) { history = []; }
+      }
+
+      const qty = Number(raw.quantity) || 0;
+      const rate = Number(raw.rate) || 0;
+      const gross = raw.gross_amount !== undefined && raw.gross_amount !== null
+        ? Number(raw.gross_amount)
+        : Math.round(qty * rate);
+
+      // Ensure date is YYYY-MM-DD string
+      const cleanDate = raw.date ? String(raw.date).substring(0, 10) : getTodayDateString();
+
+      return {
+        ...raw,
+        date: cleanDate,
+        quantity: qty,
+        rate: rate,
+        gross_amount: gross,
+        hamali_charges: Number(raw.hamali_charges) || 0,
+        other_charges: Number(raw.other_charges) || 0,
+        total_amount: Number(raw.total_amount) || 0,
+        advance_amount: Number(raw.advance_amount) || 0,
+        paid_amount: Number(raw.paid_amount) || 0,
+        pending_amount: Number(raw.pending_amount) || 0,
+        payment_history: history
+      };
+    }
+
+    // 1. LOAD ALL BILLS (PRIMARY: SUPABASE public.bills, FALLBACK: INDEXEDDB CACHE)
+    async function getAllBillsFromDB() {
+      if (!supabaseClient) {
+        initSupabase();
+      }
+
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('bills')
+            .select('*')
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('[Supabase Load Error - getAllBillsFromDB]:', error);
+            throw error;
+          }
+
+          isSupabaseHealthy = true;
+          lastSupabaseError = '';
+          updateDbStatusUI();
+
+          const normalizedList = (data || []).map(normalizeBillRecord);
+          normalizedList.sort((a, b) => {
+            if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+            return (b.bill_number || '').localeCompare(a.bill_number || '');
+          });
+
+          // Synchronize retrieved Supabase bills into IndexedDB local cache
+          replaceAllInIndexedDBCache(normalizedList);
+          return normalizedList;
+        } catch (err) {
+          console.error('[Supabase Fetch Failed, falling back to IndexedDB]:', err);
+          isSupabaseHealthy = false;
+          lastSupabaseError = err.message || 'Could not load bills from Supabase cloud.';
+          updateDbStatusUI(lastSupabaseError);
+          showToast(`क्लाऊड डेटाबेस लोड त्रुटी: ${lastSupabaseError}`, 'error');
+        }
+      }
+
+      // Fallback: Only if Supabase is unreachable or unconfigured, read local IndexedDB cache
+      if (!dbInstance) await initDatabase();
+      return new Promise((resolve) => {
+        if (!dbInstance) return resolve([]);
+        try {
+          const tx = dbInstance.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.getAll();
+          req.onsuccess = () => {
+            const bills = (req.result || []).map(normalizeBillRecord);
+            bills.sort((a, b) => {
+              if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+              return (b.bill_number || '').localeCompare(a.bill_number || '');
+            });
+            resolve(bills);
+          };
+          req.onerror = () => resolve([]);
+        } catch (e) {
+          resolve([]);
+        }
+      });
+    }
+
+    // 2. LOAD SINGLE BILL BY ID (PRIMARY: SUPABASE public.bills, FALLBACK: INDEXEDDB)
+    async function getBillByIdFromDB(id) {
+      if (!id) return null;
+      if (!supabaseClient) initSupabase();
+
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('bills')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('[Supabase Load Single Bill Error]:', error);
+            throw error;
+          }
+          if (data) {
+            isSupabaseHealthy = true;
+            lastSupabaseError = '';
+            updateDbStatusUI();
+            const norm = normalizeBillRecord(data);
+            await putInIndexedDBCache(norm);
+            return norm;
+          }
+        } catch (err) {
+          console.error('[Supabase Single Bill Fetch Error, falling back to IndexedDB]:', err);
+        }
+      }
+
+      // Fallback to local IndexedDB cache if offline
+      if (!dbInstance) await initDatabase();
+      return new Promise((resolve) => {
+        if (!dbInstance) return resolve(null);
+        try {
+          const tx = dbInstance.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(normalizeBillRecord(req.result) || null);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    // 3. CREATE OR UPDATE BILL IN SUPABASE public.bills (AND SYNC INDEXEDDB)
+    async function saveBillToDB(bill, isUpdate = false) {
+      if (!supabaseClient) {
+        initSupabase();
+      }
+
+      const cleanDate = bill.date ? String(bill.date).substring(0, 10) : getTodayDateString();
+      const nowIso = new Date().toISOString();
+
+      const payload = {
+        id: String(bill.id),
+        bill_number: String(bill.bill_number),
+        date: cleanDate,
+        person_name: bill.person_name || '',
+        mobile_number: bill.mobile_number || '',
+        village_place: bill.village_place || '',
+        market_yard: bill.market_yard || 'डांगसौंदाणे उपबाजार (Dangsaundane Upbazar)',
+        onion_variety: bill.onion_variety || 'लाल कांदा (Red Onion)',
+        quantity: Number(bill.quantity) || 0,
+        unit: bill.unit || 'Quintal',
+        rate: Number(bill.rate) || 0,
+        gross_amount: Number(bill.gross_amount) || 0,
+        hamali_charges: Number(bill.hamali_charges) || 0,
+        other_charges: Number(bill.other_charges) || 0,
+        total_amount: Number(bill.total_amount) || 0,
+        advance_amount: Number(bill.advance_amount) || 0,
+        paid_amount: Number(bill.paid_amount) || 0,
+        pending_amount: Number(bill.pending_amount) || 0,
+        payment_status: bill.payment_status || 'Pending',
+        payment_history: Array.isArray(bill.payment_history) ? bill.payment_history : [],
+        notes: bill.notes || '',
+        created_at: bill.created_at || nowIso,
+        updated_at: nowIso
+      };
+
+      if (!supabaseClient) {
+        openSupabaseModal();
+        const msg = lastSupabaseError || 'Supabase क्लाऊड डेटाबेस जोडलेला नाही! कृपया तुमची Supabase Publishable/Anon Key प्रविष्ट करा.';
+        console.error('[Supabase Save Blocked]:', msg);
+        throw new Error(msg);
+      }
+
+      let savedData = null;
+
+      if (isUpdate) {
+        // Explicit UPDATE by id for editing an existing bill or adding a payment installment
+        const { data, error } = await supabaseClient
+          .from('bills')
+          .update({
+            bill_number: payload.bill_number,
+            date: payload.date,
+            person_name: payload.person_name,
+            mobile_number: payload.mobile_number,
+            village_place: payload.village_place,
+            market_yard: payload.market_yard,
+            onion_variety: payload.onion_variety,
+            quantity: payload.quantity,
+            unit: payload.unit,
+            rate: payload.rate,
+            gross_amount: payload.gross_amount,
+            hamali_charges: payload.hamali_charges,
+            other_charges: payload.other_charges,
+            total_amount: payload.total_amount,
+            advance_amount: payload.advance_amount,
+            paid_amount: payload.paid_amount,
+            pending_amount: payload.pending_amount,
+            payment_status: payload.payment_status,
+            payment_history: payload.payment_history,
+            notes: payload.notes,
+            updated_at: payload.updated_at
+          })
+          .eq('id', payload.id)
+          .select()
+          .maybeSingle();
+
+        if (error) {
+          console.error('[Supabase UPDATE Error]:', error);
+          isSupabaseHealthy = false;
+          lastSupabaseError = error.message || 'Failed to update bill in Supabase';
+          updateDbStatusUI(lastSupabaseError);
+          throw new Error(`क्लाऊड डेटाबेस अपडेट त्रुटी (Supabase Update Error): ${error.message}`);
+        }
+        savedData = data;
+      }
+
+      // If creating a new bill (or if the row didn't exist yet during update), upsert/insert into public.bills
+      if (!savedData) {
+        const { data, error } = await supabaseClient
+          .from('bills')
+          .upsert([payload], { onConflict: 'id' })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[Supabase INSERT/UPSERT Error]:', error);
+          isSupabaseHealthy = false;
+          lastSupabaseError = error.message || 'Failed to save bill to Supabase';
+          updateDbStatusUI(lastSupabaseError);
+          throw new Error(`क्लाऊड डेटाबेस सेव्ह त्रुटी (Supabase Save Error): ${error.message}`);
+        }
+        savedData = data;
+      }
+
+      isSupabaseHealthy = true;
+      lastSupabaseError = '';
+      updateDbStatusUI();
+
+      const savedRecord = normalizeBillRecord(savedData || payload);
+      // Mirror saved record into IndexedDB fallback cache
+      await putInIndexedDBCache(savedRecord);
+      return savedRecord;
+    }
+
+    // 4. DELETE BILL (PRIMARY: SUPABASE public.bills + SYNC INDEXEDDB)
+    async function deleteBillFromDB(id) {
+      if (!supabaseClient) {
+        initSupabase();
+      }
+
+      if (!supabaseClient) {
+        openSupabaseModal();
+        throw new Error('Supabase क्लाऊड डेटाबेस जोडलेला नाही! बिल हटवण्यासाठी क्लाऊड कनेक्शन आवश्यक आहे.');
+      }
+
+      const { error } = await supabaseClient
+        .from('bills')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('[Supabase DELETE Error]:', error);
+        isSupabaseHealthy = false;
+        lastSupabaseError = error.message || 'Failed to delete bill from Supabase';
+        updateDbStatusUI(lastSupabaseError);
+        throw new Error(`क्लाऊडवरून बिल हटवताना त्रुटी: ${error.message}`);
+      }
+
+      isSupabaseHealthy = true;
+      lastSupabaseError = '';
+      updateDbStatusUI();
+
+      await removeFromIndexedDBCache(id);
+    }
+
+    // Local IndexedDB Cache Helpers (Secondary cache only)
+    async function putInIndexedDBCache(bill) {
+      if (!dbInstance) await initDatabase();
+      if (!dbInstance || !bill) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.put(bill);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch (e) {
+          resolve();
+        }
+      });
+    }
+
+    async function removeFromIndexedDBCache(id) {
+      if (!dbInstance) await initDatabase();
+      if (!dbInstance || !id) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch (e) {
+          resolve();
+        }
+      });
+    }
+
+    function replaceAllInIndexedDBCache(bills) {
+      if (!dbInstance || !Array.isArray(bills)) return;
+      try {
+        const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear();
+        for (const b of bills) {
+          store.put(b);
+        }
+      } catch (e) {}
+    }
+
+    async function generateNextBillNumber() {
+      const bills = await getAllBillsFromDB();
+      let maxNum = 0;
+      const re = /BILL-(\d+)/i;
+
+      for (const b of bills) {
+        const match = (b.bill_number || '').match(re);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      }
+
+      return `BILL-${String(maxNum + 1).padStart(4, '0')}`;
+    }
+
+    // -------------------------------------------------------------------------
+    // C. NAVIGATION & APP STATE
+    // -------------------------------------------------------------------------
+    let currentView = 'dashboard';
+    let currentViewingBillId = null;
+    let pendingDeleteBillId = null;
+    let activeDocumentLanguage = 'marathi';
+
+    function navigateTo(view, billId = null) {
+      currentView = view;
+      currentViewingBillId = billId;
+
+      document.getElementById('view-dashboard').classList.add('hidden');
+      document.getElementById('view-create').classList.add('hidden');
+      document.getElementById('view-bills').classList.add('hidden');
+      document.getElementById('view-details').classList.add('hidden');
+
+      const navLinks = ['dashboard', 'bills', 'create'];
+      navLinks.forEach(item => {
+        const desktopBtn = document.getElementById(`nav-${item}`);
+        const mobileBtn = document.getElementById(`mobile-nav-${item}`);
+        if (desktopBtn) {
+          if (item === view) {
+            desktopBtn.className = item === 'create'
+              ? 'ml-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-orange-800 shadow-sm transition-all flex items-center gap-1.5'
+              : 'px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors bg-orange-100 text-orange-950';
+          } else {
+            desktopBtn.className = item === 'create'
+              ? 'ml-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-orange-700 hover:bg-orange-800 shadow-sm transition-all flex items-center gap-1.5'
+              : 'px-3.5 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100';
+          }
+        }
+        if (mobileBtn) {
+          if (item === view) {
+            mobileBtn.className = item === 'create'
+              ? 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-orange-800 text-white shadow-xs'
+              : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-orange-100 text-orange-950';
+          } else {
+            mobileBtn.className = item === 'create'
+              ? 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-orange-700 text-white shadow-xs'
+              : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700';
+          }
+        }
+      });
+
+      window.scrollTo(0, 0);
+
+      if (view === 'dashboard') {
+        document.getElementById('view-dashboard').classList.remove('hidden');
+        renderDashboard();
+      } else if (view === 'create') {
+        document.getElementById('view-create').classList.remove('hidden');
+        setupCreateBillForm(billId);
+      } else if (view === 'bills') {
+        document.getElementById('view-bills').classList.remove('hidden');
+        renderBillsList();
+      } else if (view === 'details') {
+        document.getElementById('view-details').classList.remove('hidden');
+        renderBillDetails(billId);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // D. DASHBOARD LOGIC
+    // -------------------------------------------------------------------------
+    async function renderDashboard() {
+      const today = getTodayDateString();
+      document.getElementById('dash-date-badge').innerText = formatDate(today, true, true);
+
+      const bills = await getAllBillsFromDB();
+
+      let totalAmountToPay = 0;
+      let totalPaid = 0;
+      let totalPending = 0;
+      let todayCount = 0;
+
+      for (const b of bills) {
+        totalAmountToPay += Number(b.total_amount) || 0;
+        totalPaid += (Number(b.paid_amount) || 0) + (Number(b.advance_amount) || 0);
+        totalPending += Number(b.pending_amount) || 0;
+        if (b.date === today) todayCount++;
+      }
+
+      document.getElementById('card-total-bills').innerText = bills.length;
+      document.getElementById('card-today-bills').innerText = todayCount;
+      document.getElementById('card-total-amount').innerText = bills.length > 0 ? formatCurrency(totalAmountToPay) : '—';
+      document.getElementById('card-total-paid').innerText = bills.length > 0 ? formatCurrency(totalPaid) : '—';
+      document.getElementById('card-total-pending').innerText = bills.length > 0 ? formatCurrency(totalPending) : '—';
+
+      const latest = bills.slice(0, 8);
+      document.getElementById('dash-recent-count').innerText = `${latest.length} bills`;
+
+      const tbody = document.getElementById('dash-latest-bills-body');
+      const emptyState = document.getElementById('dash-empty-state');
+
+      if (latest.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      tbody.innerHTML = latest.map(bill => {
+        const totalPaidAmount = (Number(bill.paid_amount) || 0) + (Number(bill.advance_amount) || 0);
+        const statusBadge = getStatusBadgeHTML(bill.payment_status);
+
+        return `
+          <tr class="hover:bg-orange-50/40 transition-colors">
+            <td class="py-3 px-4 font-mono-num font-bold text-orange-950">${bill.bill_number}</td>
+            <td class="py-3 px-4 text-slate-600 whitespace-nowrap font-marathi">${formatDate(bill.date, false, true)}</td>
+            <td class="py-3 px-4 font-semibold text-slate-800 font-marathi">${escapeHTML(bill.person_name)}</td>
+            <td class="py-3 px-4 text-right font-mono-num font-bold text-slate-900">${formatCurrency(bill.total_amount)}</td>
+            <td class="py-3 px-4 text-right font-mono-num text-emerald-700 font-medium">${formatCurrency(totalPaidAmount)}</td>
+            <td class="py-3 px-4 text-right font-mono-num text-red-700 font-bold">${formatCurrency(bill.pending_amount)}</td>
+            <td class="py-3 px-4 text-center font-marathi">${statusBadge}</td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="navigateTo('details', '${bill.id}')" class="px-3 py-1 rounded-md bg-orange-50 hover:bg-orange-100 text-orange-950 font-semibold text-xs border border-orange-200 transition-colors font-marathi">
+                View / पाहा
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // -------------------------------------------------------------------------
+    // E. CREATE / EDIT BILL FORM LOGIC
+    // -------------------------------------------------------------------------
+    let editingBillPaymentHistory = [];
+
+    async function setupCreateBillForm(editBillId = null) {
+      const heading = document.getElementById('form-heading');
+      const modeBadge = document.getElementById('form-mode-badge');
+      const saveBtnText = document.getElementById('btn-save-text');
+      const errorBanner = document.getElementById('form-error-banner');
+      errorBanner.classList.add('hidden');
+
+      if (editBillId) {
+        const bill = await getBillByIdFromDB(editBillId);
+        if (!bill) {
+          showToast('बिल सापडले नाही (Bill not found)', 'error');
+          navigateTo('bills');
+          return;
+        }
+
+        editingBillPaymentHistory = Array.isArray(bill.payment_history) ? [...bill.payment_history] : [];
+
+        heading.innerHTML = `Edit Bill: ${bill.bill_number} <span class="text-sm font-bold text-slate-600 font-marathi">(बिल संपादन)</span>`;
+        modeBadge.innerText = 'संपादन (Editing)';
+        modeBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 font-marathi';
+        saveBtnText.innerText = 'Update Bill / बिल अद्ययावत करा';
+
+        document.getElementById('field-edit-id').value = bill.id;
+        document.getElementById('field-bill-number').value = bill.bill_number;
+        document.getElementById('field-date').value = bill.date || getTodayDateString();
+        document.getElementById('field-person-name').value = bill.person_name || '';
+        document.getElementById('field-mobile-number').value = bill.mobile_number || '';
+        document.getElementById('field-village-place').value = bill.village_place || '';
+        document.getElementById('field-market-yard').value = bill.market_yard || 'डांगसौंदाणे उपबाजार (Dangsaundane Upbazar)';
+        document.getElementById('field-onion-variety').value = bill.onion_variety || 'लाल कांदा (Red Onion)';
+        document.getElementById('field-quantity').value = bill.quantity !== undefined ? bill.quantity : '';
+        document.getElementById('field-unit').value = bill.unit || 'Quintal';
+        document.getElementById('field-rate').value = bill.rate !== undefined ? bill.rate : '';
+        
+        const qtyInQ = getQuantityInQuintals(bill.quantity, bill.unit || 'Quintal');
+        const defaultHamali = Math.round(qtyInQ * HAMALI_RATE_PER_QUINTAL);
+        document.getElementById('field-hamali-charges').value = bill.hamali_charges !== undefined ? bill.hamali_charges : defaultHamali;
+
+        document.getElementById('field-other-charges').value = bill.other_charges || 0;
+        document.getElementById('field-advance-amount').value = bill.advance_amount || 0;
+        document.getElementById('field-paid-amount').value = bill.paid_amount || 0;
+        document.getElementById('field-notes').value = bill.notes || '';
+
+      } else {
+        editingBillPaymentHistory = [];
+        heading.innerHTML = 'Create New Bill <span class="text-sm font-bold text-slate-600 font-marathi">(नवीन कांदा खरेदी बिल)</span>';
+        modeBadge.innerText = 'नवीन बिल (New Entry)';
+        modeBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-950 border border-orange-200 font-marathi';
+        saveBtnText.innerText = 'Save Bill / बिल सेव्ह करा';
+
+        document.getElementById('field-edit-id').value = '';
+        document.getElementById('bill-form').reset();
+        document.getElementById('field-date').value = getTodayDateString();
+        document.getElementById('field-market-yard').value = 'डांगसौंदाणे उपबाजार (Dangsaundane Upbazar)';
+        document.getElementById('field-hamali-charges').value = '0';
+        document.getElementById('field-other-charges').value = '0';
+        document.getElementById('field-advance-amount').value = '0';
+        document.getElementById('field-paid-amount').value = '0';
+
+        const nextNum = await generateNextBillNumber();
+        document.getElementById('field-bill-number').value = nextNum;
+      }
+
+      recalculateFormValues(Boolean(editBillId));
+    }
+
+    function recalculateFormValues(userManuallyEditedCharges = false) {
+      const qVal = document.getElementById('field-quantity').value;
+      const rVal = document.getElementById('field-rate').value;
+      const quantity = parseFloat(qVal) || 0;
+      const rate = parseFloat(rVal) || 0;
+      const unit = document.getElementById('field-unit').value || 'Quintal';
+      
+      document.getElementById('rate-unit-label').innerText = `(₹ / ${unit})`;
+
+      const hasValues = (quantity > 0 && rate > 0);
+
+      // 1. Gross Onion Amount = Quantity × Rate
+      const grossAmount = Math.round(quantity * rate);
+      document.getElementById('field-gross-amount').value = grossAmount;
+      document.getElementById('display-gross-amount').innerText = hasValues ? formatCurrency(grossAmount) : '—';
+      document.getElementById('calc-formula-display').innerText = `${quantity} ${unit} × ₹${rate} = ₹${grossAmount}`;
+
+      // 2. Hamali Charges: ₹10.58 per Quintal
+      const qtyInQuintals = getQuantityInQuintals(quantity, unit);
+      const hamaliField = document.getElementById('field-hamali-charges');
+      let hamali = parseFloat(hamaliField.value);
+
+      if (!userManuallyEditedCharges || isNaN(hamali)) {
+        hamali = Math.round(qtyInQuintals * HAMALI_RATE_PER_QUINTAL);
+        hamaliField.value = hamali;
+      }
+      
+      const hamaliLabel = document.getElementById('hamali-calc-label');
+      if (hamaliLabel) {
+        hamaliLabel.innerText = `${qtyInQuintals.toFixed(2)} क्विंटल × ₹${HAMALI_RATE_PER_QUINTAL} = ₹${hamali}`;
+      }
+
+      // 3. Other Charges & Settlement
+      const otherCharges = parseFloat(document.getElementById('field-other-charges').value) || 0;
+      const advance = parseFloat(document.getElementById('field-advance-amount').value) || 0;
+      const paid = parseFloat(document.getElementById('field-paid-amount').value) || 0;
+
+      // 4. Total Deductions = Hamali Charges + Other Charges
+      const totalDeductions = hamali + otherCharges;
+
+      // 5. Total Amount to be Paid = Gross - Deductions
+      const totalAmountToPay = Math.max(0, grossAmount - totalDeductions);
+      document.getElementById('field-total-amount').value = totalAmountToPay;
+      document.getElementById('display-total-amount-to-pay').innerText = hasValues ? formatCurrency(totalAmountToPay) : '—';
+      document.getElementById('calc-net-formula-display').innerText = 
+        `मूल रक्कम ₹${grossAmount} - एकूण कपात ₹${totalDeductions} = ₹${totalAmountToPay}`;
+
+      // Live Summary Previews
+      document.getElementById('summary-preview-gross').innerText = hasValues ? formatCurrency(grossAmount) : '—';
+      document.getElementById('summary-preview-hamali').innerText = hasValues ? `- ${formatCurrency(hamali)}` : '—';
+      document.getElementById('summary-preview-other').innerText = otherCharges > 0 ? `- ${formatCurrency(otherCharges)}` : '—';
+      document.getElementById('summary-preview-total-to-pay').innerText = hasValues ? formatCurrency(totalAmountToPay) : '—';
+      document.getElementById('summary-preview-advance').innerText = advance > 0 ? formatCurrency(advance) : '—';
+      document.getElementById('summary-preview-paid').innerText = paid > 0 ? formatCurrency(paid) : '—';
+
+      // 6. Net Pending Dues = Total Amount to be Paid - Advance - Paid
+      const totalReceived = advance + paid;
+      const pendingRaw = totalAmountToPay - totalReceived;
+      const pendingAmount = Math.max(0, Math.round(pendingRaw));
+
+      document.getElementById('field-pending-amount').value = pendingAmount;
+      document.getElementById('display-pending-amount').innerText = hasValues ? formatCurrency(pendingAmount) : '—';
+
+      const exceedWarning = document.getElementById('payment-exceed-warning');
+      if (totalReceived > totalAmountToPay && totalAmountToPay > 0) {
+        exceedWarning.classList.remove('hidden');
+      } else {
+        exceedWarning.classList.add('hidden');
+      }
+
+      // 7. Status calculation
+      let status = 'Pending';
+      let statusClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 font-marathi';
+      let statusDisplay = 'बाकी (Pending)';
+
+      if (totalAmountToPay > 0 && pendingAmount === 0 && totalReceived >= totalAmountToPay) {
+        status = 'Paid';
+        statusClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 font-marathi';
+        statusDisplay = 'पूर्ण अदा (Paid)';
+      } else if (totalReceived > 0) {
+        status = 'Partially Paid';
+        statusClass = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 font-marathi';
+        statusDisplay = 'अर्धवट अदा (Partially Paid)';
+      }
+
+      document.getElementById('field-payment-status').value = status;
+      const statusBadge = document.getElementById('display-payment-status-badge');
+      statusBadge.innerText = statusDisplay;
+      statusBadge.className = statusClass;
+    }
+
+    async function handleSaveBill(e) {
+      e.preventDefault();
+      const errorBanner = document.getElementById('form-error-banner');
+      const errorText = document.getElementById('form-error-text');
+      errorBanner.classList.add('hidden');
+
+      const editId = document.getElementById('field-edit-id').value;
+      let billNumber = document.getElementById('field-bill-number').value.trim();
+      const date = document.getElementById('field-date').value;
+      const personName = document.getElementById('field-person-name').value.trim();
+      const mobileNumber = document.getElementById('field-mobile-number').value.trim();
+      const villagePlace = document.getElementById('field-village-place').value.trim();
+      const marketYard = document.getElementById('field-market-yard').value.trim();
+      const onionVariety = document.getElementById('field-onion-variety').value;
+      const quantity = parseFloat(document.getElementById('field-quantity').value);
+      const unit = document.getElementById('field-unit').value;
+      const rate = parseFloat(document.getElementById('field-rate').value);
+      
+      const hamaliCharges = parseFloat(document.getElementById('field-hamali-charges').value) || 0;
+      const otherCharges = parseFloat(document.getElementById('field-other-charges').value) || 0;
+      const advanceAmount = parseFloat(document.getElementById('field-advance-amount').value) || 0;
+      const paidAmount = parseFloat(document.getElementById('field-paid-amount').value) || 0;
+      const notes = document.getElementById('field-notes').value.trim();
+
+      const validationErrors = [];
+      if (!date) validationErrors.push('दिनांक आवश्यक आहे.');
+      if (!personName) validationErrors.push('शेतकऱ्याचे नाव आवश्यक आहे.');
+      if (isNaN(quantity) || quantity <= 0) validationErrors.push('वजन ० पेक्षा जास्त असावे.');
+      if (!unit) validationErrors.push('एकक निवडा.');
+      if (isNaN(rate) || rate < 0) validationErrors.push('भाव दर ० किंवा अधिक असावा.');
+
+      const grossAmount = Math.round(quantity * rate);
+      const totalDeductions = hamaliCharges + otherCharges;
+      const totalAmountToPay = Math.max(0, grossAmount - totalDeductions);
+      const totalReceived = advanceAmount + paidAmount;
+
+      if (totalReceived > totalAmountToPay && totalAmountToPay > 0) {
+        validationErrors.push('उचली + अदा रक्कम एकूण देय रकमेपेक्षा जास्त असू शकत नाही.');
+      }
+
+      if (validationErrors.length > 0) {
+        errorText.innerText = validationErrors.join(' ');
+        errorBanner.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const pendingAmount = Math.max(0, Math.round(totalAmountToPay - totalReceived));
+      const paymentStatus = document.getElementById('field-payment-status').value;
+
+      const now = new Date().toISOString();
+      const billId = editId || ('bill_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
+
+      if (!billNumber) {
+        billNumber = await generateNextBillNumber();
+      }
+
+      const initialHistory = editId && editingBillPaymentHistory.length > 0 
+        ? editingBillPaymentHistory 
+        : (paidAmount > 0 ? [{
+            id: 'pay_init_' + Date.now(),
+            date: date,
+            amount: paidAmount,
+            mode: 'रोख (Cash)',
+            note: 'प्राथमिक देय (Initial Payment)',
+            created_at: now
+          }] : []);
+
+      const billRecord = {
+        id: billId,
+        bill_number: billNumber,
+        date,
+        person_name: personName,
+        mobile_number: mobileNumber,
+        village_place: villagePlace,
+        market_yard: marketYard,
+        onion_variety: onionVariety,
+        quantity,
+        unit,
+        rate,
+        gross_amount: grossAmount,
+        hamali_charges: hamaliCharges,
+        other_charges: otherCharges,
+        total_amount: totalAmountToPay,
+        advance_amount: advanceAmount,
+        paid_amount: paidAmount,
+        pending_amount: pendingAmount,
+        payment_status: paymentStatus,
+        payment_history: initialHistory,
+        notes,
+        created_at: editId ? (await getBillByIdFromDB(editId))?.created_at || now : now,
+        updated_at: now
+      };
+
+      try {
+        const btnSave = document.getElementById('btn-save-bill');
+        btnSave.disabled = true;
+
+        await saveBillToDB(billRecord, Boolean(editId));
+        await getAllBillsFromDB();
+
+        btnSave.disabled = false;
+        showToast(editId ? 'बिल अद्ययावत झाले!' : 'बिल सेव्ह झाले!', 'success');
+        navigateTo('details', billId);
+      } catch (err) {
+        console.error('Save bill failed:', err);
+        errorText.innerText = `त्रुटी: ${err.message || 'Error'}`;
+        errorBanner.classList.remove('hidden');
+        document.getElementById('btn-save-bill').disabled = false;
+      }
+    }
+
+    function handleCancelForm() {
+      if (currentViewingBillId) {
+        navigateTo('details', currentViewingBillId);
+      } else {
+        navigateTo('bills');
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // F. ALL BILLS LIST & SEARCH / FILTER
+    // -------------------------------------------------------------------------
+    let cachedBillsList = [];
+
+    async function renderBillsList() {
+      cachedBillsList = await getAllBillsFromDB();
+      document.getElementById('bills-count-badge').innerText = cachedBillsList.length;
+      applyBillsFilters();
+    }
+
+    function handleSearchFilterChange() {
+      const searchVal = document.getElementById('search-bills-input').value;
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (searchVal) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      const dateSelect = document.getElementById('filter-date-select').value;
+      const customDateBox = document.getElementById('custom-date-container');
+      if (dateSelect === 'custom') {
+        customDateBox.classList.remove('hidden');
+      } else {
+        customDateBox.classList.add('hidden');
+      }
+
+      applyBillsFilters();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-bills-input').value = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      document.getElementById('filter-date-select').value = 'all';
+      document.getElementById('filter-status-select').value = 'all';
+      document.getElementById('custom-date-container').classList.add('hidden');
+      document.getElementById('filter-custom-date').value = '';
+      applyBillsFilters();
+    }
+
+    function applyBillsFilters() {
+      const query = (document.getElementById('search-bills-input').value || '').toLowerCase().trim();
+      const dateFilter = document.getElementById('filter-date-select').value;
+      const customDate = document.getElementById('filter-custom-date').value;
+      const statusFilter = document.getElementById('filter-status-select').value;
+
+      const todayStr = getTodayDateString();
+      const currentYearMonth = todayStr.substring(0, 7);
+
+      const filtered = cachedBillsList.filter(b => {
+        if (query) {
+          const matchBillNum = (b.bill_number || '').toLowerCase().includes(query);
+          const matchName = (b.person_name || '').toLowerCase().includes(query);
+          const matchMobile = (b.mobile_number || '').toLowerCase().includes(query);
+          const matchPlace = (b.village_place || '').toLowerCase().includes(query);
+          if (!matchBillNum && !matchName && !matchMobile && !matchPlace) return false;
+        }
+
+        if (dateFilter === 'today' && b.date !== todayStr) return false;
+        if (dateFilter === 'this_month' && (!b.date || !b.date.startsWith(currentYearMonth))) return false;
+        if (dateFilter === 'custom' && customDate && b.date !== customDate) return false;
+        if (statusFilter !== 'all' && b.payment_status !== statusFilter) return false;
+
+        return true;
+      });
+
+      const tbody = document.getElementById('bills-table-body');
+      const emptyState = document.getElementById('bills-empty-state');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      tbody.innerHTML = filtered.map(bill => {
+        const totalPaidAmount = (Number(bill.paid_amount) || 0) + (Number(bill.advance_amount) || 0);
+        const statusBadge = getStatusBadgeHTML(bill.payment_status);
+
+        return `
+          <tr class="hover:bg-orange-50/40 transition-colors">
+            <td class="py-3 px-3 sm:px-4 font-mono-num font-bold text-orange-950 whitespace-nowrap">${bill.bill_number}</td>
+            <td class="py-3 px-3 sm:px-4 text-slate-600 whitespace-nowrap font-marathi">${formatDate(bill.date, false, true)}</td>
+            <td class="py-3 px-3 sm:px-4 font-semibold text-slate-900 font-marathi">${escapeHTML(bill.person_name)}</td>
+            <td class="py-3 px-3 sm:px-4 text-slate-600 font-marathi">${escapeHTML(bill.village_place || '—')}</td>
+            <td class="py-3 px-3 sm:px-4 text-right font-mono-num">${bill.quantity} <span class="text-[11px] text-slate-500 font-marathi">${bill.unit}</span></td>
+            <td class="py-3 px-3 sm:px-4 text-right font-mono-num text-slate-700">${formatCurrency(bill.rate)}</td>
+            <td class="py-3 px-4 text-right font-mono-num font-bold text-slate-900">${formatCurrency(bill.total_amount)}</td>
+            <td class="py-3 px-4 text-right font-mono-num text-emerald-700 font-medium">${formatCurrency(totalPaidAmount)}</td>
+            <td class="py-3 px-4 text-right font-mono-num text-red-700 font-bold">${formatCurrency(bill.pending_amount)}</td>
+            <td class="py-3 px-4 text-center whitespace-nowrap font-marathi">${statusBadge}</td>
+            <td class="py-3 px-4 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1">
+                <!-- COMPACT + Pay Button -->
+                <button onclick="openPaymentUpdateModal('${bill.id}')" title="हप्ता जमा करा (Update Payment)" class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold font-marathi border border-emerald-300">
+                  + Pay
+                </button>
+                <button onclick="navigateTo('details', '${bill.id}')" title="View Bill / पाहा" class="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900">
+                  <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+                <button onclick="navigateTo('create', '${bill.id}')" title="Edit Bill / संपादन" class="p-1.5 rounded-md hover:bg-slate-100 text-orange-700 hover:text-orange-900">
+                  <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="promptDeleteBill('${bill.id}', '${bill.bill_number}', '${escapeHTML(bill.person_name)}')" title="Delete Bill" class="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600">
+                  <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // -------------------------------------------------------------------------
+    // G. BILL DETAILS VIEW (PRINTABLE & DUAL LANGUAGE)
+    // -------------------------------------------------------------------------
+    let currentDetailedBill = null;
+
+    // Defensive helper to set innerText safely without throwing if an element is missing
+    function safeSetText(id, text) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerText = text;
+      }
+    }
+
+    async function renderBillDetails(billId) {
+      if (!billId) {
+        navigateTo('bills');
+        return;
+      }
+
+      const bill = await getBillByIdFromDB(billId);
+      if (!bill) {
+        showToast('बिल सापडले नाही', 'error');
+        navigateTo('bills');
+        return;
+      }
+
+      currentDetailedBill = bill;
+
+      safeSetText('details-top-bill-number', bill.bill_number);
+      const editBtn = document.getElementById('btn-details-edit');
+      if (editBtn) {
+        editBtn.onclick = () => navigateTo('create', bill.id);
+      }
+
+      updateBillDocumentDOM(bill, activeDocumentLanguage);
+    }
+
+    function setBillDocumentLanguage(lang) {
+      activeDocumentLanguage = lang;
+      
+      const btnMr = document.getElementById('btn-lang-marathi');
+      const btnEn = document.getElementById('btn-lang-english');
+      if (btnMr && btnEn) {
+        if (lang === 'marathi') {
+          btnMr.className = 'px-2.5 py-1.5 rounded-md text-xs font-bold bg-white text-orange-950 shadow-xs font-marathi';
+          btnEn.className = 'px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900';
+        } else {
+          btnEn.className = 'px-2.5 py-1.5 rounded-md text-xs font-bold bg-white text-orange-950 shadow-xs';
+          btnMr.className = 'px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 font-marathi';
+        }
+      }
+
+      if (currentDetailedBill) {
+        updateBillDocumentDOM(currentDetailedBill, lang);
+      }
+    }
+
+    function updateBillDocumentDOM(bill, lang = 'marathi') {
+      if (!bill) return;
+      const isMr = (lang === 'marathi');
+
+      // Title & Meta
+      safeSetText('doc-title-main', isMr ? 'कांदा खरेदी पावती' : 'ONION TRADING BILL');
+      safeSetText('doc-title-subtitle', isMr ? 'R.S. ट्रेडिंग कंपनी • डांगसौंदाणे' : 'R.S. TRADING COMPANY • DANGSAUNDANE');
+      safeSetText('doc-meta-label', isMr ? 'पावती क्र. व दिनांक' : 'Bill No & Date');
+      safeSetText('doc-bill-number', bill.bill_number || '—');
+      safeSetText('doc-date', formatDate(bill.date, true, isMr));
+
+      // Farmer
+      safeSetText('sec-farmer-heading', isMr ? 'शेतकरी तपशील (CUSTOMER / FARMER DETAILS)' : 'CUSTOMER / FARMER DETAILS');
+      safeSetText('lbl-person-name', isMr ? 'शेतकरी नाव:' : 'Farmer / Person:');
+      safeSetText('lbl-mobile', isMr ? 'मोबाईल क्र.:' : 'Mobile Number:');
+      safeSetText('lbl-village', isMr ? 'गाव / पत्ता:' : 'Village / Place:');
+      safeSetText('lbl-market', isMr ? 'मार्केट / उपबाजार:' : 'Market / Yard:');
+
+      safeSetText('doc-person-name', bill.person_name || '—');
+      safeSetText('doc-mobile', bill.mobile_number || '—');
+      safeSetText('doc-village', bill.village_place || (isMr ? 'डांगसौंदाणे' : 'Dangsaundane'));
+      safeSetText('doc-market', bill.market_yard || (isMr ? 'डांगसौंदाणे उपबाजार' : 'Dangsaundane Upbazar'));
+
+      // Onion Particulars
+      safeSetText('sec-onion-heading', isMr ? 'कांदा तपशील व वजन (ONION DETAILS & WEIGHMENT)' : 'ONION DETAILS & WEIGHMENT');
+      safeSetText('th-variety', isMr ? 'कांदा जात' : 'Variety');
+      safeSetText('th-quantity', isMr ? 'वजन' : 'Quantity');
+      safeSetText('th-unit', isMr ? 'एकक' : 'Unit');
+      safeSetText('th-rate', isMr ? 'भाव दर' : 'Rate');
+      safeSetText('th-gross', isMr ? 'एकूण मूल रक्कम' : 'Gross Amount');
+
+      safeSetText('doc-variety', bill.onion_variety || (isMr ? 'लाल कांदा' : 'Red Onion'));
+      safeSetText('doc-quantity', bill.quantity != null ? bill.quantity : '—');
+      safeSetText('doc-unit', isMr ? (bill.unit === 'Quintal' ? 'क्विंटल' : (bill.unit === 'KG' ? 'किलो' : 'टन')) : (bill.unit || '—'));
+      safeSetText('doc-rate', `${formatCurrency(bill.rate)} / ${isMr ? 'क्विंटल' : (bill.unit || '')}`);
+      
+      const gross = bill.gross_amount !== undefined ? bill.gross_amount : Math.round((bill.quantity || 0) * (bill.rate || 0));
+      safeSetText('doc-gross-amount', formatCurrency(gross));
+
+      // Deductions
+      safeSetText('sec-deductions-heading', isMr ? 'कपात व हमाली खर्च (DEDUCTIONS & APMC CHARGES)' : 'DEDUCTIONS & APMC CHARGES');
+      safeSetText('lbl-hamali-text', isMr ? 'हमाली खर्च' : 'Hamali Charges');
+      safeSetText('doc-hamali-rate-label', `(@ ₹${HAMALI_RATE_PER_QUINTAL} / ${isMr ? 'क्विंटल' : 'Quintal'})`);
+      safeSetText('lbl-other', isMr ? 'इतर / वाहतूक / तोलाई कपात खर्च:' : 'Transport / Other Deductions:');
+      safeSetText('lbl-total-deductions', isMr ? 'एकूण कपात रक्कम (Total Deductions):' : 'Total Deductions:');
+
+      const qtyInQ = getQuantityInQuintals(bill.quantity, bill.unit);
+      const hamali = bill.hamali_charges !== undefined ? bill.hamali_charges : Math.round(qtyInQ * HAMALI_RATE_PER_QUINTAL);
+      const other = Number(bill.other_charges) || 0;
+      const totalDeductions = hamali + other;
+
+      safeSetText('doc-hamali-charges', `- ${formatCurrency(hamali)}`);
+      safeSetText('doc-other-charges', `- ${formatCurrency(other)}`);
+      safeSetText('doc-total-deductions', `- ${formatCurrency(totalDeductions)}`);
+
+      // Total to be Paid & Settlement
+      safeSetText('sec-payment-heading', isMr ? 'शेतकरी देयक व हिशोब (PAYMENT & SETTLEMENT DETAILS)' : 'PAYMENT & SETTLEMENT DETAILS');
+      safeSetText('lbl-net-payable-title', isMr ? 'शेतकऱ्यास निव्वळ देय रक्कम (TOTAL AMOUNT TO BE PAID)' : 'TOTAL AMOUNT TO BE PAID (NET PAYABLE)');
+      safeSetText('lbl-net-payable-sub', isMr ? 'कांदा मूल रक्कम - (हमाली खर्च + इतर कपात)' : 'Gross Onion Amount - (Hamali + Other Charges)');
+      safeSetText('doc-total-to-pay', formatCurrency(bill.total_amount));
+
+      safeSetText('lbl-advance', isMr ? 'उचली रक्कम (Advance):' : 'Advance Amount:');
+      safeSetText('lbl-paid', isMr ? 'एकूण अदा रक्कम (Paid):' : 'Total Paid:');
+      safeSetText('lbl-status', isMr ? 'देयक स्थिती (Status):' : 'Payment Status:');
+      safeSetText('lbl-pending', isMr ? 'शेतकऱ्यास बाकी येणे / देणे रक्कम (Pending Balance Dues)' : 'Pending Balance Dues');
+
+      safeSetText('doc-advance', formatCurrency(bill.advance_amount));
+      safeSetText('doc-paid', formatCurrency(bill.paid_amount));
+      safeSetText('doc-pending', formatCurrency(bill.pending_amount));
+
+      const statusBadge = document.getElementById('doc-status-badge');
+      if (statusBadge) {
+        if (bill.payment_status === 'Paid') {
+          statusBadge.innerText = isMr ? 'पूर्ण अदा (Paid)' : 'Paid';
+          statusBadge.className = 'inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 font-marathi';
+        } else if (bill.payment_status === 'Partially Paid') {
+          statusBadge.innerText = isMr ? 'अर्धवट अदा (Partially Paid)' : 'Partially Paid';
+          statusBadge.className = 'inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 font-marathi';
+        } else {
+          statusBadge.innerText = isMr ? 'बाकी (Pending)' : 'Pending';
+          statusBadge.className = 'inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-red-100 text-red-800 font-marathi';
+        }
+      }
+
+      // Render Payment Installment History Log
+      const historyBody = document.getElementById('doc-payment-history-body');
+      const historyList = Array.isArray(bill.payment_history) ? bill.payment_history : [];
+
+      safeSetText('sec-installments-heading', isMr ? 'पेमेंट हप्ते इतिहास (PAYMENT INSTALLMENT HISTORY)' : 'PAYMENT INSTALLMENTS HISTORY');
+      safeSetText('th-pay-sr', isMr ? 'क्र.' : 'Sr.');
+      safeSetText('th-pay-date', isMr ? 'तारीख' : 'Date');
+      safeSetText('th-pay-mode', isMr ? 'प्रकार (Mode)' : 'Mode');
+      safeSetText('th-pay-note', isMr ? 'शेरा / तपशील' : 'Details / Note');
+      safeSetText('th-pay-amt', isMr ? 'जमा रक्कम (Amount)' : 'Paid Amount');
+
+      if (historyBody) {
+        if (historyList.length === 0) {
+          historyBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-3 px-3 text-center text-slate-400 font-marathi">
+                ${isMr ? 'अजून कोणताही अतिरिक्त हप्ता नोंदवला नाही. (पहिला हप्ता / अदा रक्कम वरील तक्त्यात समाविष्ट आहे)' : 'No installments recorded yet.'}
+              </td>
+            </tr>
+          `;
+        } else {
+          historyBody.innerHTML = historyList.map((item, idx) => `
+            <tr class="hover:bg-slate-50 font-medium">
+              <td class="py-2 px-3 text-slate-500 font-mono-num">${idx + 1}</td>
+              <td class="py-2 px-3 text-slate-700 whitespace-nowrap font-marathi">${formatDate(item.date, false, isMr)}</td>
+              <td class="py-2 px-3 text-slate-800 font-marathi">${escapeHTML(item.mode || 'Cash')}</td>
+              <td class="py-2 px-3 text-slate-600 font-marathi">${escapeHTML(item.note || 'हप्ता पेमेंट')}</td>
+              <td class="py-2 px-3 text-right font-mono-num font-bold text-emerald-700">${formatCurrency(item.amount)}</td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Notes
+      safeSetText('sec-notes-heading', isMr ? 'टीप / शेरा (NOTES)' : 'NOTES & REMARKS');
+      const notesContainer = document.getElementById('doc-notes-container');
+      const notesText = document.getElementById('doc-notes-text');
+      if (notesContainer && notesText) {
+        if (bill.notes && bill.notes.trim()) {
+          notesContainer.classList.remove('hidden');
+          notesText.innerText = bill.notes;
+        } else {
+          notesContainer.classList.add('hidden');
+        }
+      }
+
+      // Signatures
+      safeSetText('lbl-farmer-sign', isMr ? 'शेतकऱ्याची सही (Farmer Signature)' : "Farmer / Seller's Signature");
+      safeSetText('lbl-company-sign', isMr ? 'आर. एस. ट्रेडिंग कंपनी करिता' : 'For R.S. Trading Company');
+    }
+
+    // -------------------------------------------------------------------------
+    // H. UPDATE PAYMENT / INSTALLMENT LOGIC (हप्ता जमा करणे)
+    // -------------------------------------------------------------------------
+    let currentPaymentBill = null;
+
+    async function openPaymentUpdateModal(billId) {
+      if (!billId) return;
+      const bill = await getBillByIdFromDB(billId);
+      if (!bill) {
+        showToast('बिल सापडले नाही', 'error');
+        return;
+      }
+
+      currentPaymentBill = bill;
+
+      document.getElementById('pay-modal-bill-id').value = bill.id;
+      document.getElementById('pay-modal-bill-no').innerText = bill.bill_number;
+      document.getElementById('pay-modal-farmer-name').innerText = bill.person_name;
+      document.getElementById('pay-modal-total-amount').innerText = formatCurrency(bill.total_amount);
+      
+      const totalPaidSoFar = (Number(bill.paid_amount) || 0) + (Number(bill.advance_amount) || 0);
+      document.getElementById('pay-modal-already-paid').innerText = formatCurrency(totalPaidSoFar);
+      document.getElementById('pay-modal-pending-amount').innerText = formatCurrency(bill.pending_amount);
+
+      document.getElementById('payment-installment-form').reset();
+      document.getElementById('pay-modal-input-date').value = getTodayDateString();
+      document.getElementById('pay-modal-input-amount').value = bill.pending_amount > 0 ? bill.pending_amount : '';
+      document.getElementById('pay-modal-error').classList.add('hidden');
+
+      const modal = document.getElementById('modal-update-payment');
+      modal.classList.add('active');
+    }
+
+    function closePaymentUpdateModal() {
+      currentPaymentBill = null;
+      const modal = document.getElementById('modal-update-payment');
+      modal.classList.remove('active');
+    }
+
+    async function handleSavePaymentInstallment(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('pay-modal-error');
+      errBox.classList.add('hidden');
+
+      const billId = document.getElementById('pay-modal-bill-id').value;
+      const installmentAmount = parseFloat(document.getElementById('pay-modal-input-amount').value);
+      const paymentDate = document.getElementById('pay-modal-input-date').value;
+      const paymentMode = document.getElementById('pay-modal-input-mode').value;
+      const paymentNote = document.getElementById('pay-modal-input-note').value.trim();
+
+      if (!billId || isNaN(installmentAmount) || installmentAmount <= 0) {
+        errBox.innerText = 'कृपया वैध रक्कम टाका (Amount must be > 0).';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const bill = await getBillByIdFromDB(billId);
+      if (!bill) {
+        errBox.innerText = 'बिल डेटाबेसमध्ये सापडले नाही.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const currentPending = Number(bill.pending_amount) || 0;
+      if (installmentAmount > currentPending && currentPending > 0) {
+        errBox.innerText = `हप्त्याची रक्कम शिल्लक बाकीपेक्षा (${formatCurrency(currentPending)}) जास्त असू शकत नाही.`;
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const btnSave = document.getElementById('btn-save-installment');
+      btnSave.disabled = true;
+
+      try {
+        const existingPaid = Number(bill.paid_amount) || 0;
+        const newPaidAmount = existingPaid + installmentAmount;
+        const totalReceived = (Number(bill.advance_amount) || 0) + newPaidAmount;
+        const newPendingAmount = Math.max(0, Math.round(Number(bill.total_amount) - totalReceived));
+
+        let newStatus = 'Pending';
+        if (newPendingAmount === 0 && totalReceived >= Number(bill.total_amount)) {
+          newStatus = 'Paid';
+        } else if (totalReceived > 0) {
+          newStatus = 'Partially Paid';
+        }
+
+        const paymentRecord = {
+          id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          date: paymentDate,
+          amount: installmentAmount,
+          mode: paymentMode,
+          note: paymentNote,
+          created_at: new Date().toISOString()
+        };
+
+        const history = Array.isArray(bill.payment_history) ? [...bill.payment_history] : [];
+        history.push(paymentRecord);
+
+        const updatedBill = {
+          ...bill,
+          paid_amount: newPaidAmount,
+          pending_amount: newPendingAmount,
+          payment_status: newStatus,
+          payment_history: history,
+          updated_at: new Date().toISOString()
+        };
+
+        await saveBillToDB(updatedBill, true);
+        await getAllBillsFromDB();
+        currentDetailedBill = updatedBill;
+
+        btnSave.disabled = false;
+        closePaymentUpdateModal();
+        showToast(`हप्ता ₹${installmentAmount} यशस्वीरीत्या जमा झाला!`, 'success');
+
+        if (currentView === 'details') {
+          renderBillDetails(billId);
+        } else if (currentView === 'bills') {
+          renderBillsList();
+        } else if (currentView === 'dashboard') {
+          renderDashboard();
+        }
+      } catch (err) {
+        console.error('Update payment failed:', err);
+        errBox.innerText = `पेमेंट सेव्ह करताना त्रुटी: ${err.message || 'त्रुटी'}`;
+        errBox.classList.remove('hidden');
+        btnSave.disabled = false;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // L. SUPABASE CONFIG MODAL (ENFORCES PUBLISHABLE KEY ONLY)
+    // -------------------------------------------------------------------------
+    function openSupabaseModal() {
+      document.getElementById('cfg-supabase-url').value = dbConfig.supabaseUrl || SUPABASE_URL;
+      const currentKey = (dbConfig.supabaseAnonKey && dbConfig.supabaseAnonKey !== 'PASTE_MY_SUPABASE_PUBLISHABLE_KEY_HERE')
+        ? dbConfig.supabaseAnonKey
+        : '';
+      document.getElementById('cfg-supabase-key').value = currentKey;
+      document.getElementById('db-test-result').classList.add('hidden');
+      document.getElementById('modal-supabase').classList.add('active');
+    }
+
+    function closeSupabaseModal() {
+      document.getElementById('modal-supabase').classList.remove('active');
+    }
+
+    async function testSupabaseCredentials() {
+      const url = document.getElementById('cfg-supabase-url').value.trim();
+      const key = document.getElementById('cfg-supabase-key').value.trim();
+      const resBox = document.getElementById('db-test-result');
+
+      const keyCheck = validatePublishableKeyOnly(key);
+      if (!url || !keyCheck.valid) {
+        resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 font-marathi';
+        resBox.innerText = keyCheck.reason || 'कृपया Supabase URL आणि Publishable/Anon Key प्रविष्ट करा.';
+        resBox.classList.remove('hidden');
+        return;
+      }
+
+      resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 font-marathi';
+      resBox.innerText = 'कनेक्शन तपासत आहे...';
+      resBox.classList.remove('hidden');
+
+      try {
+        const client = window.supabase.createClient(url, key, { auth: { persistSession: false } });
+        const { data, error } = await client.from('bills').select('id').limit(1);
+        if (error) {
+          console.error('[Supabase Test Connection Error]:', error);
+          throw error;
+        }
+
+        resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 font-marathi';
+        resBox.innerText = '✓ कनेक्शन यशस्वी झाले! तुमचा Supabase क्लाऊड डेटाबेस (public.bills) तयार आहे.';
+      } catch (err) {
+        resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 font-marathi';
+        resBox.innerText = `त्रुटी (Error): ${err.message || 'Table "bills" सापडली नाही किंवा RLS पॉलिसी तपासा.'}`;
+      }
+    }
+
+    async function saveSupabaseCredentials() {
+      const url = document.getElementById('cfg-supabase-url').value.trim();
+      const key = document.getElementById('cfg-supabase-key').value.trim();
+      const resBox = document.getElementById('db-test-result');
+
+      const keyCheck = validatePublishableKeyOnly(key);
+      if (!url || !keyCheck.valid) {
+        resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 font-marathi';
+        resBox.innerText = keyCheck.reason || 'कृपया वैध Supabase Publishable/Anon Key प्रविष्ट करा.';
+        resBox.classList.remove('hidden');
+        return;
+      }
+
+      dbConfig = { supabaseUrl: url, supabaseAnonKey: key };
+      try {
+        localStorage.setItem(STORAGE_CFG_KEY, JSON.stringify(dbConfig));
+        localStorage.setItem('rs_trading_db_config', JSON.stringify(dbConfig));
+      } catch (e) {}
+
+      initSupabase();
+
+      try {
+        const { error } = await supabaseClient.from('bills').select('id').limit(1);
+        if (error) {
+          console.error('[Supabase Save Config Test Error]:', error);
+          throw error;
+        }
+
+        isSupabaseHealthy = true;
+        lastSupabaseError = '';
+        updateDbStatusUI();
+        closeSupabaseModal();
+        showToast('✓ Supabase क्लाऊड डेटाबेस यशस्वीरीत्या जोडला गेला!', 'success');
+
+        if (currentView === 'dashboard') renderDashboard();
+        else if (currentView === 'bills') renderBillsList();
+      } catch (err) {
+        isSupabaseHealthy = false;
+        lastSupabaseError = err.message || 'Connection test failed';
+        updateDbStatusUI(lastSupabaseError);
+        resBox.className = 'p-2.5 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 font-marathi';
+        resBox.innerText = `कनेक्शन त्रुटी: ${err.message}`;
+        resBox.classList.remove('hidden');
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // M. HELPERS
+    // -------------------------------------------------------------------------
+    function getStatusBadgeHTML(status) {
+      if (status === 'Paid') {
+        return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 font-marathi">पूर्ण अदा (Paid)</span>`;
+      }
+      if (status === 'Partially Paid') {
+        return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 font-marathi">अर्धवट (Partially)</span>`;
+      }
+      return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 font-marathi">बाकी (Pending)</span>`;
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // -------------------------------------------------------------------------
+    // INITIALIZATION ON PAGE LOAD
+    // -------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initDatabase();
+      navigateTo('dashboard');
+    });
+  </script>
+</body>
+</html>
